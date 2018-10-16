@@ -6,7 +6,7 @@ date: "8/31/2018"
 output: html_document
 ---
 
-```{r, results="hide"}
+```{r, results = "hide"}
 #Initialize libraries to be used
 library(tidyverse)
   #tidyverse causes LaTeX error when outputting to PDF...change to "xelatex" from PDF options. Or use      HTML
@@ -15,6 +15,7 @@ library(psych)
 library(ggplot2)
 library(dplyr)
 library(readr)
+library(stringr)
 
 #need to label variables
 library(Hmisc)
@@ -624,4 +625,161 @@ select(YH_phase1, "ID",
  "flup_Q40_empower", "flup_Q41_empower", "flup_Q42_empower", "flup_Q43_empower", 
  "flup_Q44_empower", "flup_Q45_empower", "flup_Q46_empower", "flup_Q47_empower"
 )
+```
+
+#Scoring General Self Efficacy survey
+The total score is calculated by finding the sum of the all items. For the GSE, the total score ranges between 10 and 40, with a higher score indicating more self-efficacy.  
+  1 - Not at all true
+  2 - Hardly true
+  3 - Moderately true
+  4 - Exactly true
+```{r}
+#look at baseline Self Efficacy items
+glimpse(YH_phase1[,41:50])
+
+#look at follow up Self Efficacy items
+glimpse(YH_phase1[,82:91])
+
+#get dataframe of Self Efficacy items, converting factors to doubles
+#the factor values are actually the scoring weights, 
+#so this is all that needs to be done
+
+score_se <- function(itemcols){
+  
+  #get baseline Self Efficacy scores
+  SE_base <- itemcols
+  
+  #make missing matrix the same size as the number of subjects:items in composite
+  SE_dbl <- matrix(data = NA, nrow = nrow(SE_base), ncol = ncol(SE_base))
+  
+  #fill missing matrix with factor weights as doubles
+  for (i in 1:nrow(SE_base)) {
+    for (j in 1:ncol(SE_base)) {
+      SE_dbl[i,j] <- as.double(SE_base[i,j])
+    }
+  }
+  
+  #return vector containing sum of all rows to make composite score
+  return(rowSums(SE_dbl))
+}
+
+#look at composite Self Efficacy scores at baseline and follow up
+base_Q26Q35_se_composite <- score_se(itemcols = YH_phase1[,41:50])
+flup_Q26Q35_se_composite <- score_se(itemcols = YH_phase1[,82:91])
+
+#matrix containing composite scores
+se_composite <- matrix(c(base_Q26Q35_se_composite,flup_Q26Q35_se_composite), ncol = 2)
+colnames(se_composite) <- c("base_Q26Q35_se_composite", "flup_Q26Q35_se_composite")
+
+#add Self Efficacy composite scores matrix to complete dataset
+YH_phase1_score <- cbind(YH_phase1, se_composite)
+```
+
+#Scoring Empowerment
+Should be scored with the following coding:
+  4 - Agree strongly
+  3 - Agree somewhat
+  2 - Disagree somewhat
+  1 - Disagree strongly  
+
+Note, this is reverse coding from how the data was entered 
+```{r}
+#look at baseline Self Efficacy items
+glimpse(YH_phase1[,51:62])
+
+#look at follow up Self Efficacy items
+glimpse(YH_phase1[,92:103])
+
+#note the factor values are inverted so greater value indicates less empowerment;
+#invert factor values so greater value indicates greater empowerment
+
+#get dataframe of Empowerment items, converting factors to doubles
+
+score_em <- function(itemcols){
+  
+  #get baseline Empowerment scores
+  EM_base <- itemcols
+  
+  #make missing matrix the same size as the number of subjects:items in composite
+  EM_dbl <- matrix(data = NA, nrow = nrow(EM_base), ncol = ncol(EM_base))
+  
+  #invert factor values so greater value indicates greater empowerment
+  
+  #invert Empowerment factor weights so greater value is greater empowerment
+  #fill missing matrix with modified factor weights, as doubles
+  for (i in 1:nrow(EM_base)) {
+    for (j in 1:ncol(EM_base)) {
+      if(as.double(EM_base[i,j]) == 1){
+        EM_dbl[i,j] <- 4
+      } else if(as.double(EM_base[i,j]) == 2) {
+        EM_dbl[i,j] <- 3
+      } else if(as.double(EM_base[i,j]) == 3) {
+        EM_dbl[i,j] <- 2
+      } else if(as.double(EM_base[i,j]) == 4) {
+        EM_dbl[i,j] <- 1
+      } else {
+        EM_base[i,j] <- NA
+      }
+    }
+  }
+  
+  #return vector containing sum of all rows to make composite score
+  return(rowSums(EM_dbl))
+}
+
+#look at overall Composite individual Empowerment scores at baseline and follow up
+base_Q36Q47_em_composite <- score_em(itemcols = YH_phase1[,51:62])
+flup_Q36Q47_em_composite <- score_em(itemcols = YH_phase1[,92:103])
+
+#look at overall Individual Empowerment scores at baseline and follow up
+base_Q41Q43_em_individual <- score_em(itemcols = matrix(c(YH_phase1[,56], YH_phase1[,58]), ncol = 2))
+flup_Q41Q43_em_individual <- score_em(itemcols = matrix(c(YH_phase1[,97], YH_phase1[,99]), ncol = 2))
+
+#look at overall Organizational Empowerment scores at baseline and follow up
+base_Q36Q40_em_organizational <- score_em(itemcols = YH_phase1[,51:55])
+flup_Q36Q40_em_organizational <- score_em(itemcols = YH_phase1[,92:96])
+
+#look at overall Community Empowerment scores at baseline and follow up
+base_Q42Q47_em_community <- score_em(itemcols = matrix(c(YH_phase1[,57], YH_phase1[,59], YH_phase1[,60], YH_phase1[,61], YH_phase1[,62]), ncol = 5))
+flup_Q42Q47_em_community <- score_em(itemcols = matrix(c(YH_phase1[,98], YH_phase1[,100], YH_phase1[,101], YH_phase1[,102], YH_phase1[,103]), ncol = 5))
+
+#matrix containing all 4 Empowerment composite scores at baseline and follow up
+em_composite <- matrix(c(
+    base_Q36Q47_em_composite, 
+    base_Q41Q43_em_individual, 
+    base_Q36Q40_em_organizational, 
+    base_Q42Q47_em_community, 
+    flup_Q36Q47_em_composite, 
+    flup_Q41Q43_em_individual, 
+    flup_Q36Q40_em_organizational, 
+    flup_Q42Q47_em_community
+  ), ncol = 8)
+
+#assign column names
+colnames(em_composite) <- c(
+  "base_Q36Q47_em_composite", 
+  "base_Q41Q43_em_individual", 
+  "base_Q36Q40_em_organizational", 
+  "base_Q42Q47_em_community", 
+  "flup_Q36Q47_em_composite", 
+  "flup_Q41Q43_em_individual", 
+  "flup_Q36Q40_em_organizational", 
+  "flup_Q42Q47_em_community"
+  )
+
+#add Empowerment composite scores matrix to complete dataset
+YH_phase1_score <- cbind(YH_phase1_score, em_composite)
+#glimpse(YH_phase1_score)
+```
+
+
+
+#Save Phase 1 Dataset
+```{r}
+#set save location
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
+
+# Save phase 1 data file
+#save(YH_phase1, file = "Phase1_Raw.RData")
+#save(YH_phase1_score, file = "Phase1_Scored.RData")
 ```

@@ -1,0 +1,90 @@
+---
+title: "YouHeal Visualize Survey"
+author: "Dom"
+date: "10/15/2018"
+output: html_document
+---
+
+```{r, results = "hide"}
+#Initialize libraries to be used
+library(tidyverse)
+  #tidyverse causes LaTeX error when outputting to PDF...change to "xelatex" from PDF options. Or use      HTML
+library(haven)
+library(psych)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(stringr)
+
+#need to label variables
+library(Hmisc)
+```
+
+#Get Clean Data
+```{r}
+#load dataset
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
+load("Phase1_Scored.RData")
+```
+
+#Reorganize composite data so can compare baseline and follow up
+```{r}
+#locate composite variables in dataset
+#YH_phase1_score[,1]
+#YH_phase1_score[,110:119]
+
+#subset by time into working data frames
+composite_base <- cbind(YH_phase1_score[,1],YH_phase1_score[,110],YH_phase1_score[,112:115])
+composite_flup <- cbind(YH_phase1_score[,1],YH_phase1_score[,111],YH_phase1_score[,116:119])
+
+#create new variable names, not associated with time, assign
+composite_vars <- c("Subject_ID","Q26Q35_se_composite","Q36Q47_em_composite","Q41Q43_em_individual","Q36Q40_em_organizational","Q42Q47_em_community")
+colnames(composite_base) <- composite_vars
+colnames(composite_flup) <- composite_vars
+
+#create a dummy variable for time
+composite_base$timed <- 0
+composite_flup$timed <- 1
+
+composite <- rbind(composite_base, composite_flup)
+glimpse(composite)
+```
+
+#Boxplots comparing composite scores at baseline and follow up
+```{r}
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures & Tables/Composite Boxplots")
+
+summary(composite)
+
+boxit <- function(score, titles, color){
+ boxedup <- ggplot(composite, aes(x = as.factor(timed), y = score)) + geom_boxplot(fill = color, alpha = 0.2) + 
+  ggtitle(titles) +
+  xlab("Baseline and Follow Up") +
+  ylab("Score") +
+  
+  theme( 
+    #Change size of axes labels
+    text = element_text(size = 16),
+    
+    axis.text.x = element_text(size = 10),
+    
+    #clean up the gridlines and background
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    panel.background = element_blank(), 
+    axis.line = element_line(colour = "black")
+  )
+  
+  #saveplot
+  ggsave(paste(titles,".png",sep = ""), width = 5, height = 3 , boxedup)
+}
+
+#self efficacy
+boxit(score = composite$Q26Q35_se_composite, titles = "Self Efficacy Composite", color = "slateblue")
+
+#empowerment
+boxit(score = composite$Q36Q47_em_composite, titles = "Empowerment Composite",color = "red")
+boxit(score = composite$Q41Q43_em_individual, titles = "Empowerment Individual Items", color = "orange")
+boxit(score = composite$Q36Q40_em_organizational, titles = "Empowerment Organizational Items", color = "yellow")
+boxit(score = composite$Q42Q47_em_community, titles = "Empowerment Community Items", color = "green")
+```

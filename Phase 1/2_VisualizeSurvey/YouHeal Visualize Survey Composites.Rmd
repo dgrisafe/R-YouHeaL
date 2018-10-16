@@ -16,6 +16,11 @@ library(dplyr)
 library(readr)
 library(stringr)
 
+#make a table 1
+#https://cran.r-project.org/web/packages/tableone/vignettes/introduction.html
+library(tableone)
+library(readr)
+
 #need to label variables
 library(Hmisc)
 ```
@@ -48,6 +53,27 @@ composite_flup$timed <- 1
 
 composite <- rbind(composite_base, composite_flup)
 glimpse(composite)
+```
+
+#Make a table 1 of the composite scores
+```{r}
+#assign vector of variable names to be in table 1
+myVars <- c(
+  "Q26Q35_se_composite", 
+  "Q36Q47_em_composite", 
+  "Q41Q43_em_individual", 
+  "Q36Q40_em_organizational", 
+  "Q42Q47_em_community"
+)
+
+#make table 1
+tab1 <- CreateTableOne(vars = myVars, strata = "timed" , data = composite)
+tab1
+
+#save it as excel file
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures & Tables/Composite Boxplots")
+write_excel_csv(x = tab1, path = "table1.csv")
+?write_excel_csv
 ```
 
 #Boxplots comparing composite scores at baseline and follow up

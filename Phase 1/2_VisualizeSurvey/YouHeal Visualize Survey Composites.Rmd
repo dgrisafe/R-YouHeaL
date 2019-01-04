@@ -39,11 +39,11 @@ load("Phase1_Scored.RData")
 #YH_phase1_score[,110:119]
 
 #subset by time into working data frames
-composite_base <- cbind(YH_phase1_score[,1],YH_phase1_score[,110],YH_phase1_score[,112:115])
-composite_flup <- cbind(YH_phase1_score[,1],YH_phase1_score[,111],YH_phase1_score[,116:119])
+composite_base <- cbind(YH_phase1_score[,1],YH_phase1_score[,110],YH_phase1_score[,112:115],YH_phase1_score$base_TSF_avg,YH_phase1_score$base_WC_avg)
+composite_flup <- cbind(YH_phase1_score[,1],YH_phase1_score[,111],YH_phase1_score[,116:119],YH_phase1_score$flup_TSF_avg,YH_phase1_score$flup_WC_avg)
 
 #create new variable names, not associated with time, assign
-composite_vars <- c("Subject_ID","Q26Q35_se_composite","Q36Q47_em_composite","Q41Q43_em_individual","Q36Q40_em_organizational","Q42Q47_em_community")
+composite_vars <- c("Subject_ID","Q26Q35_se_composite","Q36Q47_em_composite","Q41Q43_em_individual","Q36Q40_em_organizational","Q42Q47_em_community","Avg_TSF","Avg_WC")
 colnames(composite_base) <- composite_vars
 colnames(composite_flup) <- composite_vars
 
@@ -52,6 +52,11 @@ composite_base$timed <- 0
 composite_flup$timed <- 1
 
 composite <- rbind(composite_base, composite_flup)
+
+#make body measurements doubles
+composite$Avg_TSF <- as.double(composite$Avg_TSF)
+composite$Avg_WC <- as.double(composite$Avg_WC)
+
 glimpse(composite)
 ```
 
@@ -63,7 +68,9 @@ myVars <- c(
   "Q36Q47_em_composite", 
   "Q41Q43_em_individual", 
   "Q36Q40_em_organizational", 
-  "Q42Q47_em_community"
+  "Q42Q47_em_community",
+  "Avg_TSF",
+  "Avg_WC"
 )
 
 #make table 1
@@ -72,8 +79,8 @@ tab1
 
 #save it as excel file
 setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures & Tables/Composite Boxplots")
-write_excel_csv(x = tab1, path = "table1.csv")
-?write_excel_csv
+#write_excel_csv(x = tab1, path = "table1.csv")
+#?write_excel_csv
 ```
 
 #Boxplots comparing composite scores at baseline and follow up
@@ -113,4 +120,8 @@ boxit(score = composite$Q36Q47_em_composite, titles = "Empowerment Composite",co
 boxit(score = composite$Q41Q43_em_individual, titles = "Empowerment Individual Items", color = "orange")
 boxit(score = composite$Q36Q40_em_organizational, titles = "Empowerment Organizational Items", color = "yellow")
 boxit(score = composite$Q42Q47_em_community, titles = "Empowerment Community Items", color = "green")
+
+#anthropometric measures
+boxit(score = composite$Avg_TSF, titles = "Average Tricep Skin Fold (mm)", color = "blue")
+boxit(score = composite$Avg_WC, titles = "Average Waist Circumference (cm)", color = "black")
 ```

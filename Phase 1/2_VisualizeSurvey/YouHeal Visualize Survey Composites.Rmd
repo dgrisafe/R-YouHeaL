@@ -239,19 +239,16 @@ glimpse(YRBS_long)
     
     # overall composite
     yrbsVarsAll <- YRBS_long %>% 
-      select(starts_with("Q")) %>% 
+      select(starts_with("Q"), -Q18_YRBS_allergy, -Q23_YRBS_pe, -Q24_YRBS_sportsteam, -Q25_YRBS_concussion) %>% 
       colnames()
   
     # diet composite
     yrbsVarsDiet <- c("Q7_YRBS_juice", "Q8_YRBS_fruit", "Q9_YRBS_salad", "Q10_YRBS_potato",
                       "Q11_YRBS_carrot", "Q12_YRBS_otherveg", "Q13_YRBS_soda", "Q14_YRBS_sportdrink",
-                      "Q15_YRBS_water", "Q16_YRBS_milk", "Q17_YRBS_breakfast", "Q18_YRBS_allergy"
-                      ) 
+                      "Q15_YRBS_water", "Q16_YRBS_milk", "Q17_YRBS_breakfast") 
     
     # physical activity composite
-    yrbsVarsPhys <- c("Q19_YRBS_physical", "Q20_YRBS_strength", "Q21_YRBS_tv", "Q22_YRBS_screentime", 
-                      "Q23_YRBS_pe", "Q24_YRBS_sportsteam", "Q25_YRBS_concussion"
-                      )
+    yrbsVarsPhys <- c("Q19_YRBS_physical", "Q20_YRBS_strength", "Q21_YRBS_tv", "Q22_YRBS_screentime")
     
   # calculate composties
     

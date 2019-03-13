@@ -24,7 +24,7 @@ library(Hmisc)
 ```{r}
 #load dataset
 setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
-load("Phase1.RData")
+load("Phase1_raw.RData")
 ```
 
 #Visualizing Survey Data

@@ -129,17 +129,22 @@ $(document).ready(function () {
 </div>
 
 
-<pre class="r"><code>#Initialize libraries to be used
+<pre class="r"><code># Initialize libraries to be used
 library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ──────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
-<pre><code>## ✔ ggplot2 3.0.0     ✔ purrr   0.2.5
-## ✔ tibble  1.4.2     ✔ dplyr   0.7.6
-## ✔ tidyr   0.8.1     ✔ stringr 1.3.1
-## ✔ readr   1.1.1     ✔ forcats 0.3.0</code></pre>
-<pre><code>## ── Conflicts ─────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+<pre><code>## ── Attaching packages ─────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.1.0       ✔ purrr   0.3.0  
+## ✔ tibble  2.0.1       ✔ dplyr   0.8.0.1
+## ✔ tidyr   0.8.1       ✔ stringr 1.4.0  
+## ✔ readr   1.3.1       ✔ forcats 0.4.0</code></pre>
+<pre><code>## Warning: package 'tibble' was built under R version 3.5.2</code></pre>
+<pre><code>## Warning: package 'purrr' was built under R version 3.5.2</code></pre>
+<pre><code>## Warning: package 'dplyr' was built under R version 3.5.2</code></pre>
+<pre><code>## Warning: package 'stringr' was built under R version 3.5.2</code></pre>
+<pre><code>## Warning: package 'forcats' was built under R version 3.5.2</code></pre>
+<pre><code>## ── Conflicts ────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()</code></pre>
-<pre class="r"><code>  #tidyverse causes LaTeX error when outputting to PDF...change to &quot;xelatex&quot; from PDF options. Or use      HTML
+<pre class="r"><code>  # tidyverse causes LaTeX error when outputting to PDF...change to &quot;xelatex&quot; from PDF options. Or use      HTML
 library(haven)
 library(psych)</code></pre>
 <pre><code>## 
@@ -152,12 +157,12 @@ library(dplyr)
 library(readr)
 library(stringr)
 
-#make a table 1
-#https://cran.r-project.org/web/packages/tableone/vignettes/introduction.html
+# make a table 1
+#   https://cran.r-project.org/web/packages/tableone/vignettes/introduction.html
 library(tableone)
 library(readr)
 
-#need to label variables
+# need to label variables
 library(Hmisc)</code></pre>
 <pre><code>## Loading required package: lattice</code></pre>
 <pre><code>## Loading required package: survival</code></pre>
@@ -173,11 +178,308 @@ library(Hmisc)</code></pre>
 <pre><code>## The following objects are masked from 'package:base':
 ## 
 ##     format.pval, units</code></pre>
+<pre class="r"><code># scoring the physical and diet survey
+library(scales)</code></pre>
+<pre><code>## 
+## Attaching package: 'scales'</code></pre>
+<pre><code>## The following objects are masked from 'package:psych':
+## 
+##     alpha, rescale</code></pre>
+<pre><code>## The following object is masked from 'package:purrr':
+## 
+##     discard</code></pre>
+<pre><code>## The following object is masked from 'package:readr':
+## 
+##     col_factor</code></pre>
 <div id="get-clean-data" class="section level1">
 <h1>Get Clean Data</h1>
 <pre class="r"><code>#load dataset
 setwd(&quot;/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets&quot;)
 load(&quot;Phase1_Scored.RData&quot;)</code></pre>
+</div>
+<div id="score-diet-and-physical-activity-survey" class="section level1">
+<h1>Score Diet and Physical Activity Survey</h1>
+<div id="items-q7-to-q25" class="section level2">
+<h2>Items Q7 to Q25</h2>
+<pre class="r"><code>## wrangle data into long format
+
+  # create dataset containing only the YRBS items
+  YRBS_wide &lt;- YH_phase1_score %&gt;% 
+    select(ID, contains(&quot;YRBS&quot;)) 
+
+  # get a vector of column names, dropping base/flup prefix
+  yrbsVars &lt;- YRBS_wide %&gt;% 
+    select(ID, starts_with(&quot;base&quot;)) %&gt;% 
+    colnames() %&gt;% 
+    str_remove(&quot;base_&quot;)
+  
+  # reassign variable names
+  
+    # baseline
+    YRBS_wide_base &lt;- YRBS_wide %&gt;% 
+      select(ID, starts_with((&quot;base&quot;)))
+    colnames(YRBS_wide_base) &lt;- yrbsVars
+    # make a new variable for time of measurement, at baseline
+    YRBS_wide_base$time &lt;- 0
+    
+    # follow-up
+    YRBS_wide_flup &lt;- YRBS_wide %&gt;% 
+      select(ID, starts_with((&quot;flup&quot;)))
+    colnames(YRBS_wide_flup) &lt;- yrbsVars
+    # make a new variable for time of measurement, at follow-up
+    YRBS_wide_flup$time &lt;- 1
+
+    # now that variables have common names for different time points,
+    # merge baseline and follow-up data
+    YRBS_long &lt;- bind_rows(YRBS_wide_base, YRBS_wide_flup)</code></pre>
+<pre><code>## Warning in bind_rows_(x, .id): Vectorizing 'labelled' elements may not
+## preserve their attributes
+
+## Warning in bind_rows_(x, .id): Vectorizing 'labelled' elements may not
+## preserve their attributes</code></pre>
+<pre class="r"><code>  # make time variable a factor
+  YRBS_long$time &lt;- YRBS_long$time %&gt;% 
+    factor(
+      levels = c(0, 1),
+      labels = c(&quot;Baseline&quot;, &quot;Follow-up&quot;),
+      ordered = TRUE
+      )
+    
+  #reorder variables
+  YRBS_long &lt;- YRBS_long %&gt;%
+    select(ID, time, everything())
+
+  
+## Rescore Diet and Physical Activity Survey (items Q7 to Q25)
+##   so higher score is associated with better health
+##   and lower score is associated with worse health 
+glimpse(YRBS_long)</code></pre>
+<pre><code>## Observations: 26
+## Variables: 21
+## $ ID                  &lt;int&gt; 80, 227, 341, 459, 494, 652, 668, 700, 797, …
+## $ time                &lt;ord&gt; Baseline, Baseline, Baseline, Baseline, Base…
+## $ Q7_YRBS_juice       &lt;fct&gt; 1 to 3 times during the past 7 day, 4 to 6 t…
+## $ Q8_YRBS_fruit       &lt;fct&gt; 1 to 3 times during the past 7 days, 4 to 6 …
+## $ Q9_YRBS_salad       &lt;fct&gt; I did not eat green salad during the past 7 …
+## $ Q10_YRBS_potato     &lt;fct&gt; I did not eat potatoes during the past 7 day…
+## $ Q11_YRBS_carrot     &lt;fct&gt; 1 to 3 times during the past 7 days, 4 to 6 …
+## $ Q12_YRBS_otherveg   &lt;fct&gt; 4 to 6 times during the past 7 days, 1 to 3 …
+## $ Q13_YRBS_soda       &lt;fct&gt; 1 to 3 times during the past 7 days, I did n…
+## $ Q14_YRBS_sportdrink &lt;fct&gt; I did not drink sports drinks during the pas…
+## $ Q15_YRBS_water      &lt;fct&gt; 4 or more times per day, 4 or more times per…
+## $ Q16_YRBS_milk       &lt;fct&gt; I did not drink milk during the past 7 days,…
+## $ Q17_YRBS_breakfast  &lt;fct&gt; 2 days, 4 days, 3 days, 1 day, 4 days, 3 day…
+## $ Q18_YRBS_allergy    &lt;fct&gt; No, No, No, No, No, No, No, No, No, Not sure…
+## $ Q19_YRBS_physical   &lt;fct&gt; 1 day, 5 days, 3 days, 5 days, 4 days, 6 day…
+## $ Q20_YRBS_strength   &lt;fct&gt; 0 days, 2 days, 0 days, 4 days, 2 days, 0 da…
+## $ Q21_YRBS_tv         &lt;fct&gt; 1 hour per day, I do not watch TV on an aver…
+## $ Q22_YRBS_screentime &lt;fct&gt; 3 hours per day, 1 hour per day, 5 or more h…
+## $ Q23_YRBS_pe         &lt;fct&gt; 0 days, 4 days, 4 days, 0 days, 0 days, 0 da…
+## $ Q24_YRBS_sportsteam &lt;fct&gt; 0 teams, 0 teams, 0 teams, 0 teams, 2 teams,…
+## $ Q25_YRBS_concussion &lt;fct&gt; 0 times, 0 times, 0 times, 0 times, 0 times,…</code></pre>
+<pre class="r"><code>  # make factor variables numeric
+  YRBS_long_factor &lt;- YRBS_long %&gt;%
+    # convert all scoring variables to numeric
+    mutate_at(
+      vars(-ID, -time),
+      funs(as.numeric)
+      )</code></pre>
+<pre><code>## Warning: funs() is soft deprecated as of dplyr 0.8.0
+## please use list() instead
+## 
+## # Before:
+## funs(name = f(.)
+## 
+## # After: 
+## list(name = ~f(.))
+## This warning is displayed once per session.</code></pre>
+<pre class="r"><code>  # YRBS variables already in correct order: healthy higher score
+ 
+    yrbsVars2 &lt;- YRBS_long_factor %&gt;% 
+      select(ID, time, 
+             Q18_YRBS_allergy)
+    
+    yrbsVars4 &lt;- YRBS_long_factor %&gt;% 
+      select(ID, time, 
+             Q24_YRBS_sportsteam)
+    
+    yrbsVars6 &lt;- YRBS_long_factor %&gt;% 
+      select(ID, time, 
+             Q23_YRBS_pe)
+    
+    yrbsVars7 &lt;- YRBS_long_factor %&gt;% 
+      select(ID, time, 
+             Q8_YRBS_fruit, Q9_YRBS_salad, Q10_YRBS_potato, Q11_YRBS_carrot, 
+             Q12_YRBS_otherveg, Q15_YRBS_water, Q16_YRBS_milk)
+    
+    yrbsVars8 &lt;- YRBS_long_factor %&gt;% 
+      select(ID, time, 
+             Q17_YRBS_breakfast, Q19_YRBS_physical, Q20_YRBS_strength)
+  
+  # YRBS variables to be reversed so healthier will be higher score
+  
+    yrbsVars5R &lt;- YRBS_long_factor %&gt;% 
+      select(ID, time, 
+             Q25_YRBS_concussion)
+    
+    yrbsVars7R &lt;- YRBS_long_factor %&gt;% 
+      select(ID, time, 
+             Q7_YRBS_juice, Q13_YRBS_soda, Q14_YRBS_sportdrink, 
+             Q21_YRBS_tv, Q22_YRBS_screentime)
+  
+    
+  # rescore variables to 0-100 point scale based off all possible factor levels
+  
+    # rescale items with 4 possible answers
+    yrbsVars2[,3] &lt;- yrbsVars2[,3] %&gt;%
+        sapply(FUN = function(x) {
+          x[x == 1] &lt;- 0
+          x[x == 2] &lt;- 100
+          x[x == 3] &lt;- NaN
+          x
+          })
+    
+    # rescale items with 4 possible answers
+    yrbsVars4[,3] &lt;- yrbsVars4[,3] %&gt;%
+        sapply(FUN = function(x) {
+          x[x == 1] &lt;- 0
+          x[x == 2] &lt;- 1 * 100/3
+          x[x == 3] &lt;- 2 * 100/3
+          x[x == 4] &lt;- 100
+          x
+          })
+
+    # rescale items with 6 possible answers
+    yrbsVars6[,3] &lt;- yrbsVars6[,3] %&gt;%
+        sapply(FUN = function(x) {
+          x[x == 1] &lt;- 0
+          x[x == 2] &lt;- 20
+          x[x == 3] &lt;- 40
+          x[x == 4] &lt;- 60
+          x[x == 5] &lt;- 80
+          x[x == 6] &lt;- 100
+          x
+          })
+
+    # rescale items with 7 possible answers
+    yrbsVars7[,3:9] &lt;- yrbsVars7[,3:9] %&gt;%
+        sapply(FUN = function(x) {
+          x[x == 1] &lt;- 0
+          x[x == 2] &lt;- 1 * 100/6
+          x[x == 3] &lt;- 2 * 100/6
+          x[x == 4] &lt;- 3 * 100/6
+          x[x == 5] &lt;- 4 * 100/6
+          x[x == 6] &lt;- 5 * 100/6
+          x[x == 7] &lt;- 100
+          x
+          })
+
+    # rescale items with 8 possible answers
+    yrbsVars8[,3:5] &lt;- yrbsVars8[,3:5] %&gt;%
+        sapply(FUN = function(x) {
+          x[x == 1] &lt;- 0
+          x[x == 2] &lt;- 1 * 100/7
+          x[x == 3] &lt;- 2 * 100/7
+          x[x == 4] &lt;- 3 * 100/7
+          x[x == 5] &lt;- 4 * 100/7
+          x[x == 6] &lt;- 5 * 100/7
+          x[x == 7] &lt;- 6 * 100/7
+          x[x == 8] &lt;- 100
+          x
+          })
+    
+    # rescale items with 5 possible answers, reversed
+    yrbsVars5R[,3] &lt;- yrbsVars5R[,3] %&gt;%
+        sapply(FUN = function(x) {
+          x[x == 1] &lt;- 100
+          x[x == 2] &lt;- 75
+          x[x == 3] &lt;- 50
+          x[x == 4] &lt;- 25
+          x[x == 5] &lt;- 0
+          x
+          })
+
+    # rescale items with 7 possible answers, reversed
+    yrbsVars7R[,3:7] &lt;- yrbsVars7R[,3:7] %&gt;%
+        sapply(FUN = function(x) {
+          x[x == 1] &lt;- 100
+          x[x == 2] &lt;- 5 * 100/6
+          x[x == 3] &lt;- 4 * 100/6
+          x[x == 4] &lt;- 3 * 100/6
+          x[x == 5] &lt;- 2 * 100/6
+          x[x == 6] &lt;- 1 * 100/6
+          x[x == 7] &lt;- 0
+          x
+          })
+
+    
+    # rejoin all the scaled items together
+    YRBS_long_100 &lt;- yrbsVars2 %&gt;%
+      inner_join(yrbsVars4, by = c(&quot;ID&quot;, &quot;time&quot;)) %&gt;% 
+      inner_join(yrbsVars6, by = c(&quot;ID&quot;, &quot;time&quot;)) %&gt;% 
+      inner_join(yrbsVars7, by = c(&quot;ID&quot;, &quot;time&quot;)) %&gt;% 
+      inner_join(yrbsVars8,   by = c(&quot;ID&quot;, &quot;time&quot;)) %&gt;% 
+      inner_join(yrbsVars5R,  by = c(&quot;ID&quot;, &quot;time&quot;)) %&gt;% 
+      inner_join(yrbsVars7R,   by = c(&quot;ID&quot;, &quot;time&quot;))
+    
+    # reorder variables so in proper order
+    YRBS_long_100 &lt;- YRBS_long_100 %&gt;% select(ID, time, yrbsVars)
+    
+    # make into tibble
+    YRBS_long_100 &lt;- as.tibble(YRBS_long_100)</code></pre>
+<pre><code>## Warning: `as.tibble()` is deprecated, use `as_tibble()` (but mind the new semantics).
+## This warning is displayed once per session.</code></pre>
+<pre class="r"><code>## calculate composite scores: overall, diet, physical activity
+    
+  # identify variables in each composite
+    
+    # overall composite
+    yrbsVarsAll &lt;- YRBS_long %&gt;% 
+      select(starts_with(&quot;Q&quot;)) %&gt;% 
+      colnames()
+  
+    # diet composite
+    yrbsVarsDiet &lt;- c(&quot;Q7_YRBS_juice&quot;, &quot;Q8_YRBS_fruit&quot;, &quot;Q9_YRBS_salad&quot;, &quot;Q10_YRBS_potato&quot;,
+                      &quot;Q11_YRBS_carrot&quot;, &quot;Q12_YRBS_otherveg&quot;, &quot;Q13_YRBS_soda&quot;, &quot;Q14_YRBS_sportdrink&quot;,
+                      &quot;Q15_YRBS_water&quot;, &quot;Q16_YRBS_milk&quot;, &quot;Q17_YRBS_breakfast&quot;) 
+    
+    # physical activity composite
+    yrbsVarsPhys &lt;- c(&quot;Q19_YRBS_physical&quot;, &quot;Q20_YRBS_strength&quot;, &quot;Q21_YRBS_tv&quot;, &quot;Q22_YRBS_screentime&quot;)
+    
+  # calculate composties
+    
+    # overall composite
+    YRBS_compAll &lt;- YRBS_long_100 %&gt;%
+      select(yrbsVarsAll) %&gt;%
+      mutate(
+        compAll = apply(., 1, function(row){ mean(row, na.rm = TRUE) })
+        ) %&gt;% 
+      select(compAll)
+
+    # diet composite
+    YRBS_compDiet &lt;- YRBS_long_100 %&gt;%
+      select(yrbsVarsDiet) %&gt;%
+      mutate(
+        compDiet = apply(., 1, function(row){ mean(row, na.rm = TRUE) })
+        ) %&gt;% 
+      select(compDiet)
+
+    # physical activity composite
+    YRBS_compPhys &lt;- YRBS_long_100 %&gt;%
+      select(yrbsVarsPhys) %&gt;%
+      mutate(
+        compPhys = apply(., 1, function(row){ mean(row, na.rm = TRUE) })
+        ) %&gt;% 
+      select(compPhys)
+
+    # combine all composites into single data frame
+    YRBS_compScores &lt;- YRBS_long_100 %&gt;% 
+      select(ID, time) %&gt;% 
+      cbind(YRBS_compAll, YRBS_compDiet, YRBS_compPhys)
+  
+# PI wants to remove the following survey questions: 18. Allergies, 23. PE, 24. Sport teams, 25. Concussions
+# but only makes sense to remove allergy</code></pre>
+</div>
 </div>
 <div id="reorganize-composite-data-so-can-compare-baseline-and-follow-up" class="section level1">
 <h1>Reorganize composite data so can compare baseline and follow up</h1>
@@ -190,13 +492,13 @@ composite_base &lt;- cbind(YH_phase1_score[,1],YH_phase1_score[,110],YH_phase1_s
 composite_flup &lt;- cbind(YH_phase1_score[,1],YH_phase1_score[,111],YH_phase1_score[,116:119],YH_phase1_score$flup_TSF_avg,YH_phase1_score$flup_WC_avg)
 
 #create new variable names, not associated with time, assign
-composite_vars &lt;- c(&quot;Subject_ID&quot;,&quot;Q26Q35_se_composite&quot;,&quot;Q36Q47_em_composite&quot;,&quot;Q41Q43_em_individual&quot;,&quot;Q36Q40_em_organizational&quot;,&quot;Q42Q47_em_community&quot;,&quot;Avg_TSF&quot;,&quot;Avg_WC&quot;)
+composite_vars &lt;- c(&quot;ID&quot;,&quot;Q26Q35_se_composite&quot;,&quot;Q36Q47_em_composite&quot;,&quot;Q41Q43_em_individual&quot;,&quot;Q36Q40_em_organizational&quot;,&quot;Q42Q47_em_community&quot;,&quot;Avg_TSF&quot;,&quot;Avg_WC&quot;)
 colnames(composite_base) &lt;- composite_vars
 colnames(composite_flup) &lt;- composite_vars
 
 #create a dummy variable for time
-composite_base$timed &lt;- 0
-composite_flup$timed &lt;- 1
+composite_base$time &lt;- 0
+composite_flup$time &lt;- 1
 
 composite &lt;- rbind(composite_base, composite_flup)
 
@@ -204,72 +506,66 @@ composite &lt;- rbind(composite_base, composite_flup)
 composite$Avg_TSF &lt;- as.double(composite$Avg_TSF)
 composite$Avg_WC &lt;- as.double(composite$Avg_WC)
 
-glimpse(composite)</code></pre>
-<pre><code>## Observations: 26
-## Variables: 9
-## $ Subject_ID               &lt;int+lbl&gt; 80, 227, 341, 459, 494, 652, 668,...
-## $ Q26Q35_se_composite      &lt;dbl&gt; 25, 36, 27, 33, 34, 34, 27, 30, 32, 3...
-## $ Q36Q47_em_composite      &lt;dbl&gt; 33, 41, 33, 40, 46, 36, 40, 38, 44, 3...
-## $ Q41Q43_em_individual     &lt;dbl&gt; 5, 8, 5, 8, 7, 8, 7, 7, 8, 7, 7, 7, 6...
-## $ Q36Q40_em_organizational &lt;dbl&gt; 16, 19, 18, 18, 20, 14, 18, 16, 20, 1...
-## $ Q42Q47_em_community      &lt;dbl&gt; 12, 14, 10, 14, 19, 14, 15, 15, 16, 1...
-## $ Avg_TSF                  &lt;dbl&gt; 23.83333, 11.16667, 29.00000, 11.5000...
-## $ Avg_WC                   &lt;dbl&gt; 77.33333, 66.50000, 83.83333, 85.6666...
-## $ timed                    &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0...</code></pre>
-</div>
-<div id="make-a-table-1-of-the-composite-scores" class="section level1">
-<h1>Make a table 1 of the composite scores</h1>
-<pre class="r"><code>#assign vector of variable names to be in table 1
-myVars &lt;- c(
-  &quot;Q26Q35_se_composite&quot;, 
-  &quot;Q36Q47_em_composite&quot;, 
-  &quot;Q41Q43_em_individual&quot;, 
-  &quot;Q36Q40_em_organizational&quot;, 
-  &quot;Q42Q47_em_community&quot;,
-  &quot;Avg_TSF&quot;,
-  &quot;Avg_WC&quot;
-)
 
-#make table 1
-tab1 &lt;- CreateTableOne(vars = myVars, strata = &quot;timed&quot; , data = composite)
-tab1</code></pre>
-<pre><code>##                                       Stratified by timed
-##                                        0            1            p     
-##   n                                       13           13              
-##   Q26Q35_se_composite (mean (sd))      31.31 (3.57) 32.54 (3.50)  0.384
-##   Q36Q47_em_composite (mean (sd))      39.46 (3.84) 41.38 (3.38)  0.188
-##   Q41Q43_em_individual (mean (sd))      6.92 (1.04)  7.15 (0.55)  0.486
-##   Q36Q40_em_organizational (mean (sd)) 17.38 (2.10) 18.54 (1.61)  0.130
-##   Q42Q47_em_community (mean (sd))      15.15 (2.51) 15.69 (1.93)  0.546
-##   Avg_TSF (mean (sd))                  18.95 (9.01) 19.69 (8.63)  0.832
-##   Avg_WC (mean (sd))                   79.15 (7.66) 77.22 (5.48)  0.466
-##                                       Stratified by timed
-##                                        test
-##   n                                        
-##   Q26Q35_se_composite (mean (sd))          
-##   Q36Q47_em_composite (mean (sd))          
-##   Q41Q43_em_individual (mean (sd))         
-##   Q36Q40_em_organizational (mean (sd))     
-##   Q42Q47_em_community (mean (sd))          
-##   Avg_TSF (mean (sd))                      
-##   Avg_WC (mean (sd))</code></pre>
-<pre class="r"><code>#save it as excel file
-setwd(&quot;/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures &amp; Tables/Composite Boxplots&quot;)
-#write_excel_csv(x = tab1, path = &quot;table1.csv&quot;)
-#?write_excel_csv</code></pre>
+# combine with YRBS diet and physical activity composites
+
+  # make all id and time variables to be the same numerics (from factors)
+  composite$ID &lt;- as.integer(composite$ID)
+  composite$time &lt;- as.factor(composite$time)
+  YRBS_compScores$time &lt;- as.factor(YRBS_compScores$time)
+  composite$time &lt;- as.numeric(composite$time)
+  YRBS_compScores$time &lt;- as.numeric(YRBS_compScores$time)
+  
+  # check to make sure matched up correctly
+  cbind(composite$ID,YRBS_compScores$ID,composite$time,YRBS_compScores$time)</code></pre>
+<pre><code>##       [,1] [,2] [,3] [,4]
+##  [1,]   80   80    1    1
+##  [2,]  227  227    1    1
+##  [3,]  341  341    1    1
+##  [4,]  459  459    1    1
+##  [5,]  494  494    1    1
+##  [6,]  652  652    1    1
+##  [7,]  668  668    1    1
+##  [8,]  700  700    1    1
+##  [9,]  797  797    1    1
+## [10,]  831  831    1    1
+## [11,]  878  878    1    1
+## [12,]  899  899    1    1
+## [13,]  940  940    1    1
+## [14,]   80   80    2    2
+## [15,]  227  227    2    2
+## [16,]  341  341    2    2
+## [17,]  459  459    2    2
+## [18,]  494  494    2    2
+## [19,]  652  652    2    2
+## [20,]  668  668    2    2
+## [21,]  700  700    2    2
+## [22,]  797  797    2    2
+## [23,]  831  831    2    2
+## [24,]  878  878    2    2
+## [25,]  899  899    2    2
+## [26,]  940  940    2    2</code></pre>
+<pre class="r"><code># final dataset with all composite scores to be considered
+composite_all &lt;- composite %&gt;%
+  inner_join(YRBS_compScores, by = c(&quot;ID&quot;,&quot;time&quot;)) %&gt;% 
+  select(ID, time, everything()) %&gt;% 
+  mutate(
+    # format time variable as factor with labels
+    time = factor(time, levels = c(1,2), labels = c(&quot;Baseline&quot;, &quot;Follow-up&quot;))
+  )</code></pre>
 </div>
 <div id="boxplots-comparing-composite-scores-at-baseline-and-follow-up" class="section level1">
 <h1>Boxplots comparing composite scores at baseline and follow up</h1>
 <pre class="r"><code>setwd(&quot;/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures &amp; Tables/Composite Boxplots&quot;)
 
-summary(composite)</code></pre>
-<pre><code>##    Subject_ID    Q26Q35_se_composite Q36Q47_em_composite
-##  Min.   : 80.0   Min.   :25.00       Min.   :33.00      
-##  1st Qu.:459.0   1st Qu.:29.25       1st Qu.:38.00      
-##  Median :668.0   Median :32.00       Median :41.00      
-##  Mean   :612.8   Mean   :31.92       Mean   :40.42      
-##  3rd Qu.:831.0   3rd Qu.:34.75       3rd Qu.:43.00      
-##  Max.   :940.0   Max.   :40.00       Max.   :46.00      
+summary(composite_all)</code></pre>
+<pre><code>##        ID               time    Q26Q35_se_composite Q36Q47_em_composite
+##  Min.   : 80.0   Baseline :13   Min.   :25.00       Min.   :33.00      
+##  1st Qu.:459.0   Follow-up:13   1st Qu.:29.25       1st Qu.:38.00      
+##  Median :668.0                  Median :32.00       Median :41.00      
+##  Mean   :612.8                  Mean   :31.92       Mean   :40.42      
+##  3rd Qu.:831.0                  3rd Qu.:34.75       3rd Qu.:43.00      
+##  Max.   :940.0                  Max.   :40.00       Max.   :46.00      
 ##  Q41Q43_em_individual Q36Q40_em_organizational Q42Q47_em_community
 ##  Min.   :5.000        Min.   :14.00            Min.   :10.00      
 ##  1st Qu.:7.000        1st Qu.:17.00            1st Qu.:14.00      
@@ -277,22 +573,29 @@ summary(composite)</code></pre>
 ##  Mean   :7.038        Mean   :17.96            Mean   :15.42      
 ##  3rd Qu.:7.750        3rd Qu.:20.00            3rd Qu.:17.00      
 ##  Max.   :8.000        Max.   :20.00            Max.   :19.00      
-##     Avg_TSF          Avg_WC          timed    
-##  Min.   : 6.50   Min.   :66.50   Min.   :0.0  
-##  1st Qu.:11.04   1st Qu.:74.71   1st Qu.:0.0  
-##  Median :18.42   Median :77.17   Median :0.5  
-##  Mean   :19.32   Mean   :78.19   Mean   :0.5  
-##  3rd Qu.:26.71   3rd Qu.:81.92   3rd Qu.:1.0  
-##  Max.   :34.50   Max.   :93.00   Max.   :1.0</code></pre>
+##     Avg_TSF          Avg_WC         compAll         compDiet    
+##  Min.   : 6.50   Min.   :66.50   Min.   :40.85   Min.   :37.23  
+##  1st Qu.:11.04   1st Qu.:74.71   1st Qu.:47.74   1st Qu.:44.70  
+##  Median :18.42   Median :77.17   Median :51.00   Median :47.62  
+##  Mean   :19.32   Mean   :78.19   Mean   :52.24   Mean   :48.52  
+##  3rd Qu.:26.71   3rd Qu.:81.92   3rd Qu.:55.81   3rd Qu.:52.87  
+##  Max.   :34.50   Max.   :93.00   Max.   :68.42   Max.   :66.67  
+##     compPhys    
+##  Min.   :14.88  
+##  1st Qu.:33.04  
+##  Median :46.73  
+##  Mean   :47.18  
+##  3rd Qu.:60.57  
+##  Max.   :72.02</code></pre>
 <pre class="r"><code>boxit &lt;- function(score, titles, color){
- boxedup &lt;- ggplot(composite, aes(x = as.factor(timed), y = score)) + geom_boxplot(fill = color, alpha = 0.2) + 
+ boxedup &lt;- ggplot(composite_all, aes(x = as.factor(time), y = score)) + geom_boxplot(fill = color, alpha = 0.2) + 
   ggtitle(titles) +
-  xlab(&quot;Baseline and Follow Up&quot;) +
+  xlab(&quot;Time&quot;) +
   ylab(&quot;Score&quot;) +
   
   theme( 
     #Change size of axes labels
-    text = element_text(size = 16),
+    text = element_text(size = 14),
     
     axis.text.x = element_text(size = 10),
     
@@ -308,17 +611,97 @@ summary(composite)</code></pre>
 }
 
 #self efficacy
-boxit(score = composite$Q26Q35_se_composite, titles = &quot;Self Efficacy Composite&quot;, color = &quot;slateblue&quot;)
+boxit(score = composite_all$Q26Q35_se_composite, titles = &quot;Self Efficacy Composite&quot;, color = &quot;gray&quot;)
 
 #empowerment
-boxit(score = composite$Q36Q47_em_composite, titles = &quot;Empowerment Composite&quot;,color = &quot;red&quot;)
-boxit(score = composite$Q41Q43_em_individual, titles = &quot;Empowerment Individual Items&quot;, color = &quot;orange&quot;)
-boxit(score = composite$Q36Q40_em_organizational, titles = &quot;Empowerment Organizational Items&quot;, color = &quot;yellow&quot;)
-boxit(score = composite$Q42Q47_em_community, titles = &quot;Empowerment Community Items&quot;, color = &quot;green&quot;)
+boxit(score = composite_all$Q36Q47_em_composite, titles = &quot;Empowerment Composite&quot;,color = &quot;blue&quot;)
+boxit(score = composite_all$Q41Q43_em_individual, titles = &quot;Empowerment Individual Items&quot;, color = &quot;blue&quot;)
+boxit(score = composite_all$Q36Q40_em_organizational, titles = &quot;Empowerment Organizational Items&quot;, color = &quot;blue&quot;)
+boxit(score = composite_all$Q42Q47_em_community, titles = &quot;Empowerment Community Items&quot;, color = &quot;blue&quot;)
 
 #anthropometric measures
-boxit(score = composite$Avg_TSF, titles = &quot;Average Tricep Skin Fold (mm)&quot;, color = &quot;blue&quot;)
-boxit(score = composite$Avg_WC, titles = &quot;Average Waist Circumference (cm)&quot;, color = &quot;black&quot;)</code></pre>
+boxit(score = composite_all$Avg_TSF, titles = &quot;Average Tricep Skin Fold (mm)&quot;, color = &quot;green&quot;)
+boxit(score = composite_all$Avg_WC, titles = &quot;Average Waist Circumference (cm)&quot;, color = &quot;green&quot;)
+
+
+boxit100 &lt;- function(score, titles, color){
+ boxedup &lt;- ggplot(composite_all, aes(x = as.factor(time), y = score)) + geom_boxplot(fill = color, alpha = 0.2) +
+   scale_y_continuous(limits = c(40,80)) +
+   ggtitle(titles) +
+   xlab(&quot;Time&quot;) +
+   ylab(&quot;Score&quot;) +
+  
+  theme( 
+    #Change size of axes labels
+    text = element_text(size = 14),
+    
+    axis.text.x = element_text(size = 10),
+    
+    #clean up the gridlines and background
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    panel.background = element_blank(), 
+    axis.line = element_line(colour = &quot;black&quot;)
+  )
+  
+  #saveplot
+  ggsave(paste(titles,&quot;.png&quot;,sep = &quot;&quot;), width = 5, height = 3 , boxedup)
+}
+
+# YRBS diet and physical activity scores
+boxit100(score = composite_all$compAll, titles = &quot;YRBS Combined Diet &amp; Activity Composite&quot;, color = &quot;red&quot;)
+boxit100(score = composite_all$compDiet, titles = &quot;YRBS Diet Composite&quot;, color = &quot;red&quot;)</code></pre>
+<pre><code>## Warning: Removed 2 rows containing non-finite values (stat_boxplot).</code></pre>
+<pre class="r"><code>boxit100(score = composite_all$compPhys, titles = &quot;YRBS Physical Activity Composite&quot;, color = &quot;red&quot;)</code></pre>
+<pre><code>## Warning: Removed 9 rows containing non-finite values (stat_boxplot).</code></pre>
+</div>
+<div id="make-a-table-1-of-the-composite-scores" class="section level1">
+<h1>Make a table 1 of the composite scores</h1>
+<pre class="r"><code>#assign vector of variable names to be in table 1
+myVars &lt;- c(
+  &quot;compDiet&quot;,
+  &quot;compPhys&quot;,
+  &quot;compAll&quot;,
+  &quot;Q26Q35_se_composite&quot;, 
+  &quot;Q36Q47_em_composite&quot;, 
+  &quot;Q41Q43_em_individual&quot;, 
+  &quot;Q36Q40_em_organizational&quot;, 
+  &quot;Q42Q47_em_community&quot;,
+  &quot;Avg_TSF&quot;,
+  &quot;Avg_WC&quot;
+)
+
+#make table 1
+tab1 &lt;- CreateTableOne(vars = myVars, strata = &quot;time&quot; , data = composite_all)
+tab1</code></pre>
+<pre><code>##                                       Stratified by time
+##                                        Baseline      Follow-up     p     
+##   n                                       13            13               
+##   compDiet (mean (sd))                 46.14 (5.17)  50.90 (7.01)   0.060
+##   compPhys (mean (sd))                 44.73 (13.56) 49.63 (17.83)  0.438
+##   compAll (mean (sd))                  49.64 (5.01)  54.84 (7.93)   0.057
+##   Q26Q35_se_composite (mean (sd))      31.31 (3.57)  32.54 (3.50)   0.384
+##   Q36Q47_em_composite (mean (sd))      39.46 (3.84)  41.38 (3.38)   0.188
+##   Q41Q43_em_individual (mean (sd))      6.92 (1.04)   7.15 (0.55)   0.486
+##   Q36Q40_em_organizational (mean (sd)) 17.38 (2.10)  18.54 (1.61)   0.130
+##   Q42Q47_em_community (mean (sd))      15.15 (2.51)  15.69 (1.93)   0.546
+##   Avg_TSF (mean (sd))                  18.95 (9.01)  19.69 (8.63)   0.832
+##   Avg_WC (mean (sd))                   79.15 (7.66)  77.22 (5.48)   0.466
+##                                       Stratified by time
+##                                        test
+##   n                                        
+##   compDiet (mean (sd))                     
+##   compPhys (mean (sd))                     
+##   compAll (mean (sd))                      
+##   Q26Q35_se_composite (mean (sd))          
+##   Q36Q47_em_composite (mean (sd))          
+##   Q41Q43_em_individual (mean (sd))         
+##   Q36Q40_em_organizational (mean (sd))     
+##   Q42Q47_em_community (mean (sd))          
+##   Avg_TSF (mean (sd))                      
+##   Avg_WC (mean (sd))</code></pre>
+<pre class="r"><code>#save it as excel file
+setwd(&quot;/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures &amp; Tables/Composite Boxplots&quot;)</code></pre>
 </div>
 
 

@@ -1,0 +1,74 @@
+---
+title: "YouHeaL Overview"
+author: "Dom Grisafe"
+date: "6/10/2019"
+output: html_document
+---
+
+```{r}
+#Packages
+library(tidyverse)
+library(vistime)      # this makes a timeline
+library(plotly)       # for exporting timeline to .png
+library(lubridate)    # allows adding months to dates
+```
+
+```{r timeline, echo = FALSE}
+
+# start dates for different phases of cohort 1
+phase1_start <- as.Date("2018-1-1")
+phase2.1_start <- phase1_start %m+% months(6)
+phase2.2_start <- phase1_start %m+% years(1)
+phase3.1_start <- phase2.1_start %m+% years(1)
+phase3.2_start <- phase2.2_start %m+% years(1)
+
+# cohort 1 start dates
+cohort1_start <- c(phase1_start, phase2.1_start, phase2.2_start, phase3.1_start, phase3.2_start)
+
+# cohort 1 end dates, 6 months after start
+cohort1_end <- cohort1_start %m+% months(6)
+
+
+# cohort 2 start dates, same time as cohort 1 end dates
+cohort2_start <- cohort1_start %m+% years(1)
+
+# cohort 2 end dates, 6 months after start
+cohort2_end <- cohort2_start %m+% months(6)
+
+
+# cohort 3 start dates, same time as cohort 2 end dates
+cohort3_start <- cohort2_start %m+% years(1)
+
+# cohort 3 end dates, 6 months after start
+cohort3_end <- cohort3_start %m+% months(6)
+
+
+# list for timeline
+YouHeaL_time <- data.frame(
+    
+  id      = c("Cohort 1", "Cohort 1", "Cohort 1", "Cohort 1", "Cohort 1", 
+              "Cohort 2", "Cohort 2", "Cohort 2", "Cohort 2", "Cohort 2", 
+              "Cohort 3", "Cohort 3", "Cohort 3", "Cohort 3", "Cohort 3"),
+  
+  content = c(
+    "Phase 1\nCHP Training &\nService Project", "Phase 2.1\nPHM Training\n& CHP Recruit", "Phase 2.2\nPHMs Train\nCHPs", "Phase 3.1\nPHL Training &\nPHLs Train PHMs", "Phase 3.2\nPHL & PHMs\nTrain CHPs",
+    "Phase 1", "Phase 2.1", "Phase 2.2", "Phase 3.1", "Phase 3.2",
+    "Phase 1", "Phase 2.1", "Phase 2.2", "Phase 3.1", "Phase 3.2"
+    ),
+  
+  # Example format: 2016-02-14 15:00:00
+  start = c(cohort1_start, cohort2_start, cohort3_start),
+  
+  end   = c(cohort1_end, cohort2_end, cohort3_end),
+  
+  color = rep(c("#cbb69d", "#603913", "#c69c6e", "#c69c6e", "#c69c6e"), 3)
+  
+)
+
+timeline <- vistime(data = YouHeaL_time, events = "content", groups = "id", start = "start", end = "end", background_lines = 9, colors = "color")
+
+# save the image locally 
+orca(p = timeline, file = "YouHeaL_timeline.png", format = 'png', width = 1200, height = 500, scale = 4)
+```
+<!-- Load timeline that has been edited appropriately -->
+![](YouHeal_timeline_edited.png)

@@ -1,0 +1,1915 @@
+---
+title: "YouHeaL Analysis"
+author: "Dom Grisafe"
+date: "6/10/2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r, include = FALSE}
+#Initialize libraries to be used
+library(tidyverse)
+  #tidyverse causes LaTeX error when outputting to PDF...change to "xelatex" from PDF options. Or use      HTML
+library(readxl)
+library(haven)
+library(psych)
+library(dplyr)
+library(readr)
+library(stringr)
+library(cowplot)
+library(tableone)      # table 1
+library(kableExtra)    # HTML tables
+
+#need to label variables
+library(Hmisc)
+```
+
+
+#Timeline
+
+![](YouHeaL_timeline_edited.png)
+
+The image shows the expected timeline of the [YouHeaL study](https://www.youhealprogram.com/). The study is designed to have 3 cohorts that each begin one year apart.  
+
+During the first 6 months the first cohort is trained as Community Health Promoters (CHP) and completes a service project. The second 6 months, they are trained as Peer Health Mentors (PHM), where they learn to train their classmates to be CHPs. During the third 6 month period, Cohort 1 become PHMs that train Cohort 2 to be CHPs. At this point Cohort 2 begins doing everything Cohort 1 started, but 1 year behind them. During the fourth 6 month period, Cohort 1 is trained as Peer Health Leaders (PHL), where they learn to train the CHPs to become PHMs for Cohort 3, and then PHLs from Cohort 1 actually train Cohort 2 to be PHMs. Finally, during the fifth 6 month period, the PHLs from Cohort 1 work with the PHMs from Cohort 2 to train Cohort 3 to be CHPs.  
+
+Each cohort is larger than the last, propagating healthy lifestyle habits to increasingly larger groups of high school students through their social networks.
+
+
+#Data Management
+
+The following steps are documented to explain how the data has been cleaned before the analysis. It is not important for most people to understand this, but it is written here to explain the data management process to future analysts.
+
+##Variable Naming Convention
+
+During the previous analysis, each variable was scored as baseline for Phase 1, and follow-up for Phase 2.1. From here on, Google Forms will be used to collect data in a standardized way. Variables are named by the following conventions.  
+
+yh_cohort#_datatype_phase#, where:  
+
+"cohort#" is cohort1, cohort2, or cohort3
+
+"datatype" is sociodem, anthro, YRBS, efficacy, or empower  
+
+"phase#" is phase1, phase2.1, phase2.2, phase3.1, or phase 3.2
+
+
+##Load Data from Cohorts and Phases
+
+This chunk loads data for Cohort 1 for Phases 1 and 2.1. This data was from the previously cleaned data in the previous analysis.
+
+```{r loadP1P2.1Data, echo = FALSE}
+
+#set directory to "Data" folder where .CSV files are located
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
+
+#import phase 1 and phase 2.1 data
+load(file = "Phase1_Scored.RData")
+```
+
+
+###Cohort 1 (C1)
+
+Cohort 1, Phase 1 and Phase 2.1 were cleaned using previous code, and saved as a single dataset. This section takes this dataset and tidies it so it will match subsequent data collections, which will be collected using a [Google Form](https://docs.google.com/forms/d/e/1FAIpQLScYYCT2T8FhgbfYV5c6LHLVtrtcxSaBXMpgN363Atb-9C3Vdw/viewform). All subsequent data will be in the same format. The functions built below will automatically import the datasets, and make tidying the data much more efficient for analyses of data collected during future phases.
+
+
+####C1, Phase 1
+
+Format data from Cohort 1, Phase 1, so that it matches the data imported using the Google Form.
+
+```{r clean_c1p1, echo = FALSE}
+
+#subset sociodemographic data
+yh_cohort1_sociodem_phase1 <- YH_phase1_score %>% select(ID, sex, age, language1, language2, english_prof, race, city, zip)
+
+# put this in a function do not get excess datasets in global environment
+clean_c1p1 <- function(){
+
+  # subset phase 1 anthro data
+  yh_cohort1_anthro_phase1 <- YH_phase1_score %>% select(
+    ID,
+    TSF_1 = base_TSF_1, TSF_2 = base_TSF_2, TSF_3 = base_TSF_3, 
+    WC_1 = base_WC_1, WC_2 = base_WC_2, WC_3 = base_WC_3
+    )
+  
+  # subset phase 1 YRBS data
+  yh_cohort1_YRBS_phase1 <- YH_phase1_score %>% select(
+    ID,
+    Q7_YRBS_juice = base_Q7_YRBS_juice,
+    Q8_YRBS_fruit = base_Q8_YRBS_fruit,
+    Q9_YRBS_salad = base_Q9_YRBS_salad, 
+    Q10_YRBS_potato = base_Q10_YRBS_potato,
+    Q11_YRBS_carrot = base_Q11_YRBS_carrot,
+    Q12_YRBS_otherveg = base_Q12_YRBS_otherveg,
+    Q13_YRBS_soda = base_Q13_YRBS_soda,
+    Q14_YRBS_sportdrink = base_Q14_YRBS_sportdrink,
+    Q15_YRBS_water = base_Q15_YRBS_water,
+    Q16_YRBS_milk = base_Q16_YRBS_milk,
+    Q17_YRBS_breakfast = base_Q17_YRBS_breakfast,
+    Q18_YRBS_allergy = base_Q18_YRBS_allergy,
+    Q19_YRBS_physical = base_Q19_YRBS_physical,
+    Q20_YRBS_strength = base_Q20_YRBS_strength,
+    Q21_YRBS_tv = base_Q21_YRBS_tv,
+    Q22_YRBS_screentime = base_Q22_YRBS_screentime,
+    Q23_YRBS_pe = base_Q23_YRBS_pe,
+    Q24_YRBS_sportsteam = base_Q24_YRBS_sportsteam,
+    Q25_YRBS_concussion = base_Q25_YRBS_concussion
+  )
+  
+  # subset phase 1 efficacy data
+  yh_cohort1_efficacy_phase1 <- YH_phase1_score %>% select(
+    ID,
+    Q26_efficacy = base_Q26_efficacy,
+    Q27_efficacy = base_Q27_efficacy,
+    Q28_efficacy = base_Q28_efficacy,
+    Q29_efficacy = base_Q29_efficacy,
+    Q30_efficacy = base_Q30_efficacy,
+    Q31_efficacy = base_Q31_efficacy,
+    Q32_efficacy = base_Q32_efficacy,
+    Q33_efficacy = base_Q33_efficacy,
+    Q34_efficacy = base_Q34_efficacy,
+    Q35_efficacy = base_Q35_efficacy
+  )
+  
+  # subset phase 1 empower data
+  yh_cohort1_empower_phase1 <- YH_phase1_score %>% select(
+    ID,
+    Q36_empower = base_Q36_empower,
+    Q37_empower = base_Q37_empower,
+    Q38_empower = base_Q38_empower,
+    Q39_empower = base_Q39_empower,
+    Q40_empower = base_Q40_empower,
+    Q41_empower = base_Q41_empower,
+    Q42_empower = base_Q42_empower,
+    Q43_empower = base_Q43_empower,
+    Q44_empower = base_Q44_empower,
+    Q45_empower = base_Q45_empower,
+    Q46_empower = base_Q46_empower,
+    Q47_empower = base_Q47_empower
+  )
+  
+  # add cohort and phase variables, join data into single dataset 
+  yh_cohort1_phase1 <- yh_cohort1_sociodem_phase1 %>%
+    select(ID) %>% 
+    
+    # add cohort and phase variables
+    mutate(
+      cohort = "Cohort 1",
+      phase = "Phase 1"
+    ) %>% 
+    
+    # join phase 1 data into single dataset
+    full_join(y = yh_cohort1_sociodem_phase1, by = "ID") %>% 
+    full_join(y = yh_cohort1_anthro_phase1, by = "ID") %>% 
+    full_join(y = yh_cohort1_YRBS_phase1, by = "ID") %>% 
+    full_join(y = yh_cohort1_efficacy_phase1, by = "ID") %>% 
+    full_join(y = yh_cohort1_empower_phase1, by = "ID")
+}
+
+# call function, save dataset for cohort 1, phase 1
+yh_cohort1_phase1 <- clean_c1p1()
+```
+
+
+####C1, Phase 2.1
+
+Format data from Cohort 1, Phase 2.1, so that it matches the data imported using the Google Form.
+
+```{r clean_c1p2.1, echo = FALSE}
+
+# put this in a function do not get excess datasets in global environment
+clean_c1p2.1 <- function(){
+  
+  # subset phase 2.1 anthro data
+  yh_cohort1_anthro_phase2.1 <- YH_phase1_score %>% select(
+    ID,
+    TSF_1 = flup_TSF_1, TSF_2 = flup_TSF_2, TSF_3 = flup_TSF_3, 
+    WC_1 = flup_WC_1, WC_2 = flup_WC_2, WC_3 = flup_WC_3
+    )
+  
+  # subset phase 1 YRBS data
+  yh_cohort1_YRBS_phase2.1 <- YH_phase1_score %>% select(
+    ID,
+    Q7_YRBS_juice = flup_Q7_YRBS_juice,
+    Q8_YRBS_fruit = flup_Q8_YRBS_fruit,
+    Q9_YRBS_salad = flup_Q9_YRBS_salad, 
+    Q10_YRBS_potato = flup_Q10_YRBS_potato,
+    Q11_YRBS_carrot = flup_Q11_YRBS_carrot,
+    Q12_YRBS_otherveg = flup_Q12_YRBS_otherveg,
+    Q13_YRBS_soda = flup_Q13_YRBS_soda,
+    Q14_YRBS_sportdrink = flup_Q14_YRBS_sportdrink,
+    Q15_YRBS_water = flup_Q15_YRBS_water,
+    Q16_YRBS_milk = flup_Q16_YRBS_milk,
+    Q17_YRBS_breakfast = flup_Q17_YRBS_breakfast,
+    Q18_YRBS_allergy = flup_Q18_YRBS_allergy,
+    Q19_YRBS_physical = flup_Q19_YRBS_physical,
+    Q20_YRBS_strength = flup_Q20_YRBS_strength,
+    Q21_YRBS_tv = flup_Q21_YRBS_tv,
+    Q22_YRBS_screentime = flup_Q22_YRBS_screentime,
+    Q23_YRBS_pe = flup_Q23_YRBS_pe,
+    Q24_YRBS_sportsteam = flup_Q24_YRBS_sportsteam,
+    Q25_YRBS_concussion = flup_Q25_YRBS_concussion
+  )
+  
+  # subset phase 1 efficacy data
+  yh_cohort1_efficacy_phase2.1 <- YH_phase1_score %>% select(
+    ID,
+    Q26_efficacy = flup_Q26_efficacy,
+    Q27_efficacy = flup_Q27_efficacy,
+    Q28_efficacy = flup_Q28_efficacy,
+    Q29_efficacy = flup_Q29_efficacy,
+    Q30_efficacy = flup_Q30_efficacy,
+    Q31_efficacy = flup_Q31_efficacy,
+    Q32_efficacy = flup_Q32_efficacy,
+    Q33_efficacy = flup_Q33_efficacy,
+    Q34_efficacy = flup_Q34_efficacy,
+    Q35_efficacy = flup_Q35_efficacy
+  )
+  
+  # subset phase 1 empower data
+  yh_cohort1_empower_phase2.1 <- YH_phase1_score %>% select(
+    ID,
+    Q36_empower = flup_Q36_empower,
+    Q37_empower = flup_Q37_empower,
+    Q38_empower = flup_Q38_empower,
+    Q39_empower = flup_Q39_empower,
+    Q40_empower = flup_Q40_empower,
+    Q41_empower = flup_Q41_empower,
+    Q42_empower = flup_Q42_empower,
+    Q43_empower = flup_Q43_empower,
+    Q44_empower = flup_Q44_empower,
+    Q45_empower = flup_Q45_empower,
+    Q46_empower = flup_Q46_empower,
+    Q47_empower = flup_Q47_empower
+  )
+  
+  # add cohort and phase variables, join data into single dataset 
+  yh_cohort1_phase2.1 <- yh_cohort1_sociodem_phase1 %>%
+    select(ID) %>% 
+    
+    # add cohort and phase variables
+    mutate(
+      cohort = "Cohort 1",
+      phase = "Phase 2.1"
+    ) %>% 
+    
+    # join phase 2.1 data into single dataset
+    full_join(y = yh_cohort1_sociodem_phase1, by = "ID") %>% 
+    full_join(y = yh_cohort1_anthro_phase2.1, by = "ID") %>% 
+    full_join(y = yh_cohort1_YRBS_phase2.1, by = "ID") %>% 
+    full_join(y = yh_cohort1_efficacy_phase2.1, by = "ID") %>% 
+    full_join(y = yh_cohort1_empower_phase2.1, by = "ID")
+}
+
+yh_cohort1_phase2.1 <- clean_c1p2.1()
+```
+
+
+####Select Google Form Variables  
+
+This chunk contains functions that are used to load variables from the Google Form output, by selecting appropriate variables and renaming them to the standard naming convention.  
+
+```{r loadGF, echo = FALSE}
+
+# load and rename sociodemographics that are collected on Phase 1 only (i.e. not on repeated measurements)
+load_GF_sociodem_phase1 <- function(dataset){
+  dataset %>%
+    select(
+      ID = "Survey ID",
+      DOC = "Date of Completion",
+      DOB = "Date of Birth",
+      sex = "1. What is your gender?",
+      age = "2. What is your age?",
+      language1 = starts_with("3. What language"),
+      language2 = starts_with("3a) What other language"),
+      english_prof = starts_with("4. How well do you speak"),
+      race = starts_with("5. What is your race?"),
+      city = starts_with("6a. In what city"),
+      zip = starts_with("6b. In what Zip")
+    ) %>%
+    # rename ID and anthro variables as numeric
+    mutate(ID = as.double(ID))
+}
+
+# load and rename sociodemographics that are collected on repeated measurements only (i.e. all phases except Phase 1)
+load_GF_sociodem_repeat <- function(dataset){
+  dataset %>%
+    select(
+      ID = "Survey ID",
+      DOC = "Date of Completion",
+      DOB = "Date of Birth"
+    ) %>%
+    # rename ID and anthro variables as numeric
+    mutate(ID = as.double(ID))
+  }
+
+# load and rename anthropometric variables
+load_GF_anthro <- function(dataset){
+  dataset %>% 
+    select(
+      ID = "Survey ID",
+      TSF_1 = "Tricep Skinfold 1",
+      TSF_2 = "Tricep Skinfold 2",
+      TSF_3 = "Tricep Skinfold 3",
+      WC_1 = "Waist Circumference 1",
+      WC_2 = "Waist Circumference 2",
+      WM_1 = "Weight Measurement 1",
+      WM_2 = "Weight Measurement 2",
+      HM_1 = "Height Measurement 1",
+      HM_2 = "Height Measurement 2"
+      ) %>%  
+    # format ID and anthopometric variables to numeric
+    mutate(
+      ID = as.double(ID),
+      TSF_1 = as.numeric(TSF_1),
+      TSF_2 = as.numeric(TSF_2),
+      TSF_3 = as.numeric(TSF_3),
+      WC_1 = as.numeric(WC_1),
+      WC_2 = as.numeric(WC_2),
+      WM_1 = as.numeric(WM_1),
+      WM_2 = as.numeric(WM_2),
+      HM_1 = as.numeric(HM_1),
+      HM_2 = as.numeric(HM_2)
+      ) %>% 
+    
+    # remove rows with all NA
+    filter(
+      !is.na(TSF_1) & !is.na(TSF_2) & !is.na(TSF_3) &
+        !is.na(WC_1) & !is.na(WC_2) &  
+        !is.na(WM_1) &  !is.na(WM_2) & 
+        !is.na(HM_1) &  !is.na(HM_2)
+    )
+}
+
+# load and rename YRBS survey variables
+load_GF_YRBS <- function(dataset){
+  dataset %>%
+    select(
+      ID = "Survey ID",
+      Q7_YRBS_juice = starts_with("7. During"),
+      Q8_YRBS_fruit = starts_with("8. During"),
+      Q9_YRBS_salad = starts_with("9. During"),
+      Q10_YRBS_potato = starts_with("10. During"),
+      Q11_YRBS_carrot = starts_with("11. During"),
+      Q12_YRBS_otherveg = starts_with("12. During"),
+      Q13_YRBS_soda = starts_with("13. During"),
+      Q14_YRBS_sportdrink = starts_with("14. During"),
+      Q15_YRBS_water = starts_with("15. During"),
+      Q16_YRBS_milk = starts_with("16. During"),
+      Q17_YRBS_breakfast = starts_with("17. During"),
+      Q18_YRBS_allergy = starts_with("18. Are there"),
+      Q19_YRBS_physical = starts_with("19. During"),
+      Q20_YRBS_strength = starts_with("20. During"),
+      Q21_YRBS_tv = starts_with("21. On an"),
+      Q22_YRBS_screentime = starts_with("22. On an"),
+      Q23_YRBS_pe = starts_with("23. In an"),
+      Q24_YRBS_sportsteam = starts_with("24. During"),
+      Q25_YRBS_concussion = starts_with("25. During")
+      )  %>%
+    # rename ID and anthro variables as numeric
+    mutate(ID = as.double(ID))
+}
+
+# load and rename self-efficacy survey variables
+load_GF_efficacy <- function(dataset){
+  dataset %>%
+    select(
+      ID = "Survey ID",
+      Q26_efficacy = starts_with("26. I can always"),
+      Q27_efficacy = starts_with("27. If someone"),
+      Q28_efficacy = starts_with("28. It is easy"),
+      Q29_efficacy = starts_with("29. I am confident"),
+      Q30_efficacy = starts_with("30. Thanks to my"),
+      Q31_efficacy = starts_with("31. I can solve"),
+      Q32_efficacy = starts_with("32. I can remain"),
+      Q33_efficacy = starts_with("33. When I am"),
+      Q34_efficacy = starts_with("34. If I am in"),
+      Q35_efficacy = starts_with("35. I can usually")
+      ) %>%
+    # rename ID and anthro variables as numeric
+    mutate(ID = as.double(ID))
+}
+
+# load and rename empowerment survey variables
+load_GF_empower <- function(dataset){
+  dataset %>%
+    select(
+      ID = "Survey ID",
+      Q36_empower = starts_with("36. I can influence"),
+      Q37_empower = starts_with("37. This organization has"),
+      Q38_empower = starts_with("38. This organization is"),
+      Q39_empower = starts_with("39. This organization can"),
+      Q40_empower = starts_with("40. I am satisfied"),
+      Q41_empower = starts_with("41. I have control"),
+      Q42_empower = starts_with("42. My community has"),
+      Q43_empower = starts_with("43. I am satisfied"),
+      Q44_empower = starts_with("44. I can influence decisions"),
+      Q45_empower = starts_with("45. By working together"),
+      Q46_empower = starts_with("46. People in my community"),
+      Q47_empower = starts_with("47. I am satisfied")
+    ) %>%
+    # rename ID and anthro variables as numeric
+    mutate(ID = as.double(ID))
+  }
+```
+
+
+####C1, Phase 2.2
+
+Import data from Cohort 1, Phase 2.2. This data was collected using the Google Form.
+
+```{r clean_c1p2.2, echo = FALSE, warning = FALSE}
+
+#set directory to "Data" folder where excel file for Cohort 1 is located
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 1")
+
+clean_c1p2.2 <- function(){
+  
+  #subset sociodemographic data
+  yh_cohort1_sociodem_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>%
+    # rename sociodem variables
+    load_GF_sociodem_repeat() %>% 
+    # add cohort and phase variables
+    mutate(
+      cohort = "Cohort 1",
+      phase = "Phase 2.2"
+    )
+  
+  # load anthropometric data from Phase 2.2
+  yh_cohort1_anthro_phase2.2 <- read_excel("20190305_Cohort1_AnthropometricData.xlsx", sheet = "Post PHM; 01192019", col_names = TRUE, skip = 1) %>%
+    # rename anthropometric variables
+    load_GF_anthro()
+    
+  # load YRBS data from Phase 2.2
+  yh_cohort1_YRBS_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>% 
+    # rename YRBS survey variables
+    load_GF_YRBS()
+  
+  # load efficacy data from Phase 2.2
+  yh_cohort1_efficacy_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>%
+    load_GF_efficacy()
+  
+  # load empowerment data from Phase 2.2
+  yh_cohort1_empower_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>%
+    load_GF_empower()
+
+  # join phase 2.2 data into single dataset
+  yh_cohort1_sociodem_phase2.2 %>% 
+  full_join(y = yh_cohort1_anthro_phase2.2, by = "ID") %>% 
+  full_join(y = yh_cohort1_YRBS_phase2.2, by = "ID") %>% 
+  full_join(y = yh_cohort1_efficacy_phase2.2, by = "ID") %>% 
+  full_join(y = yh_cohort1_empower_phase2.2, by = "ID")
+}
+
+# call function, save dataset for cohort 1, phase 2.2
+yh_cohort1_phase2.2 <- 
+  # add sociodemographics from Phase 1
+  yh_cohort1_sociodem_phase1 %>% 
+  # join to clean function above
+  right_join(y = clean_c1p2.2(), by = "ID")
+```
+
+
+###Cohort 2 (C2)
+
+
+####C2, Phase 1
+
+Import data from Cohort 2, Phase 1. This data was collected using the Google Form.
+
+```{r clean_c2p1, echo = FALSE}
+
+ #set directory to "Data" folder where excel file for Cohort 2 is located
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 2")
+
+clean_c2p1 <- function(){
+  
+  #subset sociodemographic data
+  yh_cohort2_sociodem_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
+    # rename sociodem variables
+    load_GF_sociodem_phase1() %>% 
+    # add cohort and phase variables
+    mutate(
+      cohort = "Cohort 2",
+      phase = "Phase 1"
+    )
+  
+  # load anthropometric data
+  yh_cohort2_anthro_phase1 <- read_excel("20190305_Cohort2_AnthropometricData.xlsx", sheet = "Initial DDMM2019", col_names = TRUE, skip = 1) %>%
+    # rename anthropometric variables
+    load_GF_anthro()
+    
+  # load YRBS data
+  yh_cohort2_YRBS_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
+    # rename YRBS survey variables
+    load_GF_YRBS()
+  
+  # load efficacy data
+  yh_cohort2_efficacy_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
+    load_GF_efficacy()
+  
+  # load empowerment data
+  yh_cohort2_empower_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
+    load_GF_empower()
+
+  # join data into single dataset
+  yh_cohort2_sociodem_phase1 %>% 
+  full_join(y = yh_cohort2_anthro_phase1, by = "ID") %>% 
+  full_join(y = yh_cohort2_YRBS_phase1, by = "ID") %>% 
+  full_join(y = yh_cohort2_efficacy_phase1, by = "ID") %>% 
+  full_join(y = yh_cohort2_empower_phase1, by = "ID")
+}
+
+# call function, save dataset
+yh_cohort2_phase1 <- clean_c2p1()
+```
+
+
+##Format Factors
+
+This section formats categorical variables (i.e. factors) so they can be plotted and scored in a consistent fashion.
+
+###List of Survey Item Responses to Format Factors  
+
+This list contains all possible responses for all items in the YouHeaL survey. These are based off the [Google Form](https://docs.google.com/forms/d/e/1FAIpQLScYYCT2T8FhgbfYV5c6LHLVtrtcxSaBXMpgN363Atb-9C3Vdw/viewform) that is available for future phases of the study. This way all responses can be scored automatically, without having to recode factor levels each time. A later chunk will make a function to format the Google Form item response factors.  
+
+This list also contains old levels, from the manually entered data for Phases 1 and 2.1. This is used in the following chunk to reformat old responses to the updated format. 
+
+```{r itemFactorList, echo = FALSE}
+# make list of vectors of the properly (and old) formatted YRBS response levels
+survey_fct_levels <- list(
+
+  
+  ## cohort and phase levels
+  cohort = c("Cohort 1", "Cohort 2", "Cohort 3"),
+  phase = c("Phase 1", "Phase 2.1", "Phase 2.2", "Phase 3.1", "Phase 3.2"),
+  
+  
+  ## new sociodemographic levels
+  sex = c("Female", "Male"),
+  english_prof = c("Very well", "Well", "Not well", "Not at all"),
+  language1 = c("English", "Spanish"),
+
+  ## old sociodemographic levels
+  sex_old = c("F", "M"),
+  english_prof_old = c(1, 2, 3, 4),
+
+  ## new YRBS factor levels
+  
+  #Q7 - "During the past 7 days, how many times did you drink 100% fruit juices such as orange juice, apple juice, or grape juice? (Do not count punch, Kool-Aid, sports drinks, or other fruit-flavored drinks.)"
+  Q7 = c("I did not drink 100% fruit juice during the past 7 days",
+         "1 to 3 times during the past 7 days", 
+         "4 to 6 times during the past 7 days",
+         "1 time per day",
+         "2 times per day",
+         "3 times per day",
+         "4 or more times per day"
+         ),
+  
+  #Q8 - "During the past 7 days, how many times did you eat fruit? (Do not count fruit juice.)"
+  Q8 = c("I did not eat fruit during the past 7 days",
+         "1 to 3 times during the past 7 days",
+         "4 to 6 times during the past 7 days",
+         "1 time per day",
+         "2 times per day",
+         "3 times per day",
+         "4 or more times per day"
+         ),
+  
+  #Q9 - "During the past 7 days, how many times did you eat green salad?"
+  Q9 = c("I did not eat green salad during the past 7 days", 
+         "1 to 3 times during the past 7 days",
+         "4 to 6 times during the past 7 days",
+         "1 time per day",
+         "2 times per day",
+         "3 times per day",
+         "4 or more times per day"
+         ),
+  
+  #Q10 - "During the past 7 days, how many times did you eat potatoes? (Do not count french fries, fried potatoes, or potato chips.)"
+  Q10 = c("I did not eat potatoes during the past 7 days",
+          "1 to 3 times during the past 7 days",
+          "4 to 6 times during the past 7 days",
+          "1 time per day",
+          "2 times per day",
+          "3 times per day",
+          "4 or more times per day"
+          ),
+
+  #Q11 - "During the past 7 days, how many times did you eat carrots?"
+  Q11 = c("I did not eat carrots during the past 7 days",
+          "1 to 3 times during the past 7 days",
+          "4 to 6 times during the past 7 days",
+          "1 time per day",
+          "2 times per day",
+          "3 times per day",
+          "4 or more times per day"
+          ),
+  
+  #Q12 - "During the past 7 days, how many times did you eat other vegetables? (Do not count green salad, potatoes, or carrots.)"
+  Q12 = c("I did not eat other vegetables during the past 7 days",
+          "1 to 3 times during the past 7 days",
+          "4 to 6 times during the past 7 days",
+          "1 time per day",
+          "2 times per day",
+          "3 times per day",
+          "4 or more times per day"
+          ),
+  
+  #Q13 - "During the past 7 days, how many times did you drink a can, bottle, or glass of soda or pop, such as Coke, Pepsi, or Sprite? (Do not count diet soda or diet pop.)"
+  Q13 = c("I did not drink soda or pop during the past 7 days",
+          "1 to 3 times during the past 7 days",
+          "4 to 6 times during the past 7 days",
+          "1 time per day",
+          "2 times per day",
+          "3 times per day",
+          "4 or more times per day"
+          ),
+  
+  #Q14 - "During the past 7 days, how many times did you drink a can, bottle, or glass of a sports drink such as Gatorade or Powerade? (Do not count low-calorie sports drinks such as Propel or G2.)"
+  Q14 = c("I did not drink sports drinks during the past 7 days",
+          "1 to 3 times during the past 7 days",
+          "4 to 6 times during the past 7 days",
+          "1 time per day",
+          "2 times per day",
+          "3 times per day",
+          "4 or more times per day"
+          ),
+  
+  #Q15 - "During the past 7 days, how many times did you drink a bottle or glass of plain water? (Count tap, bottled, and unflavored sparkling water.)"
+  Q15 = c("I did not drink water during the past 7 days",
+          "1 to 3 times during the past 7 days",
+          "4 to 6 times during the past 7 days",
+          "1 time per day",
+          "2 times per day",
+          "3 times per day",
+          "4 or more times per day"
+          ),
+  
+  #Q16 - "During the past 7 days, how many glasses of milk did you drink? (Count the milk you drank in a glass or cup, from a carton, or with cereal. Count the half pint of milk served at school as equal to one glass.)"
+  Q16 = c("I did not drink milk during the past 7 days",
+          "1 to 3 glasses during the past 7 days",
+          "4 to 6 glasses during the past 7 days",
+          "1 glass per day",
+          "2 glasses per day",
+          "3 glasses per day",
+          "4 or more glasses per day"
+          ),
+  
+  #Q17 - "During the past 7 days, on how many days did you eat breakfast?"
+  Q17 = c("0 days",
+          "1 day",
+          "2 days",
+          "3 days",
+          "4 days",
+          "5 days",
+          "6 days",
+          "7 days"
+          ),
+  
+  #Q18 - "Are there any foods that you have to avoid because eating the food could cause an allergic reaction, like skin rashes, swelling, itching, vomiting, coughing, or trouble breathing?"
+  Q18 = c("Yes",
+          "No",
+          "Not sure"
+          ),
+  
+  #Q19 - "During the past 7 days, on how many days were you physically active for a total of at least 60 minutes per day? (Add up all the time you spent in any kind of physical activity that increased your heart rate and made you breathe hard some of the time.)"
+  Q19 = c("0 days",
+          "1 day",
+          "2 days",
+          "3 days",
+          "4 days",
+          "5 days",
+          "6 days",
+          "7 days"
+          ),
+  
+  #Q20 - "During the past 7 days, on how many days did you do exercises to strengthen or tone your muscles, such as push-ups, sit-ups, or weight lifting?"
+  Q20 = c("0 days",
+          "1 day",
+          "2 days",
+          "3 days",
+          "4 days",
+          "5 days",
+          "6 days",
+          "7 days"
+          ),
+  
+  #Q21 - "On an average school day, how many hours do you watch TV?"
+  Q21 = c("I do not watch TV on an average school day",
+          "Less than 1 hour per day",
+          "1 hour per day",
+          "2 hours per day",
+          "3 hours per day",
+          "4 hours per day",
+          "5 or more hours per day"
+          ),
+  
+  #Q22 - "On an average school day, how many hours do you play video or computer games or use a computer for something that is not school work? (Count time spent on things such as Xbox, PlayStation, an iPad or other tablet, a smartphone, texting, YouTube, Instagram, Facebook, or other social media.)"
+  Q22 = c("I do not play video or computer games or use a computer for something that is not school work",
+          "Less than 1 hour per day",
+          "1 hour per day",
+          "2 hours per day",
+          "3 hours per day",
+          "4 hours per day",
+          "5 or more hours per day"
+          ),
+  
+  #Q23 - "In an average week when you are in school, on how many days do you go to physical education (PE) classes?"
+  Q23 = c("0 days",
+          "1 day",
+          "2 days",
+          "3 days",
+          "4 days",
+          "5 days"
+          ),
+  
+  #Q24 - "During the past 12 months, on how many sports teams did you play? (Count any teams run by your school or community groups.)"
+  Q24 = c("0 teams",
+          "1 team",
+          "2 teams",
+          "3 or more teams"
+          ),
+  
+  #Q25 - "During the past 12 months, how many times did you have a concussion from playing a sport or being physically active?"
+  Q25 = c("0 times",
+          "1 time",
+          "2 times",
+          "3 times",
+          "4 or more times"
+          ),
+
+
+## efficacy levels
+  efficacy = c("Not at all true",
+               "Hardly true",
+               "Moderately true",
+               "Exactly true"),
+
+
+## empowerment levels
+  empower  = c("Agree strongly",
+               "Agree somewhat",
+               "Disagree somewhat",
+               "Disagree strongly"),
+  
+
+## old sociodemographic levels
+  english_prof_old = c(1, 2, 3, 4),
+
+## old YRBS factor levels
+  Q7_old = c("Did not drink 100% fruit juice during the past 7 day",
+             "1 to 3 times during the past 7 day",
+             "4 to 6 times during the past 7 day",
+             "1 time per day",
+             "2 times per day",
+             "3 times per day",
+             "4 or more times per day"
+             ),
+  
+  Q8_old = c("I did not eat fruit during the past 7 days",
+             "1 to 3 times during the past 7 days",
+             "4 to 6 times during the past 7 days",
+             "1 time per day",
+             "2 times per day",
+             "3 times per day",
+             "4 or more times per day"
+             ),
+  
+  Q9_old = c("I did not eat green salad during the past 7 days",
+             "1 to 3 times during the past 7 days",
+             "4 to 6 times during the past 7 days",
+             "1 time per day",
+             "2 times per day",
+             "3 times per day",
+             "4 or more times per day"
+             ),
+  
+  Q10_old = c("I did not eat potatoes during the past 7 days", 
+               "1 to 3 times during the past 7 days",
+               "4 to 6 times during the past 7 days",
+               "1 time per day",
+               "2 times per day",
+               "3 times per day",
+               "4 or more times per day"
+              ),
+  Q11_old = c("I did not eat carrots during the past 7 days", 
+               "1 to 3 times during the past 7 days",
+               "4 to 6 times during the past 7 days",
+               "1 time per day",
+               "2 times per day",
+               "3 times per day",
+               "4 or more times per day"
+              ),
+  Q12_old = c("I did not eat other vegetables during the past 7 days", 
+               "1 to 3 times during the past 7 days",
+               "4 to 6 times during the past 7 days",
+               "1 time per day",
+               "2 times per day",
+               "3 times per day",
+               "4 or more times per day"
+              ),
+  Q13_old = c("I did not drink soda or pop during the past 7 days", 
+               "1 to 3 times during the past 7 days",
+               "4 to 6 times during the past 7 days",
+               "1 time per day",
+               "2 times per day",
+               "3 times per day",
+               "4 or more times per day"
+              ),
+  Q14_old = c("I did not drink sports drinks during the past 7 days", 
+               "1 to 3 times during the past 7 days",
+               "4 to 6 times during the past 7 days",
+               "1 time per day",
+               "2 times per day",
+               "3 times per day",
+               "4 or more times per day"
+              ),
+  Q15_old = c("I did not drink water during the past 7 days", 
+               "1 to 3 times during the past 7 days",
+               "4 to 6 times during the past 7 days",
+               "1 time per day",
+               "2 times per day",
+               "3 times per day",
+               "4 or more times per day"
+              ),
+  Q16_old = c("I did not drink milk during the past 7 days", 
+               "1 to 3 glasses during the past 7 days",
+               "4 to 6 glasses during the past 7 days",
+               "1 glass per day",
+               "2 glasses per day",
+               "3 glasses per day",
+               "4 or more glasses per day"
+              ),
+  Q17_old = c("0 days", 
+               "1 day",
+               "2 days",
+               "3 days",
+               "4 days",
+               "5 days",
+               "6 days",
+               "7 days"
+              ),
+  Q18_old = c("Yes", 
+               "No",
+               "Not sure"
+              ),
+  Q19_old = c("0 days", 
+               "1 day",
+               "2 days",
+               "3 days",
+               "4 days",
+               "5 days",
+               "6 days",
+               "7 days"
+              ),
+  Q20_old = c("0 days", 
+               "1 day",
+               "2 days",
+               "3 days",
+               "4 days",
+               "5 days",
+               "6 days",
+               "7 days"
+              ),
+  Q21_old = c("I do not watch TV on an average school day", 
+               "Less than 1 hour per day",
+               "1 hour per day",
+               "2 hours per day",
+               "3 hours per day",
+               "4 hours per day",
+               "5 or more hours per day"
+              ),
+  Q22_old = c("I do not play video or computer games or use a computer for something that is not school work", 
+               "Less than 1 hour per day",
+               "1 hour per day",
+               "2 hours per day",
+               "3 hours per day",
+               "4 hours per day",
+               "5 or more hours per day"
+              ),
+  Q23_old = c("0 days", 
+               "1 day",
+               "2 days",
+               "3 days",
+               "4 days",
+               "5 days"
+              ),
+  Q24_old = c("0 teams", 
+               "1 team",
+               "2 teams",
+               "3 or more teams"
+              ),
+  Q25_old = c("0 times", 
+               "1 time",
+               "2 times",
+               "3 times",
+               "4 or more times"
+              )
+)
+```
+
+
+###Format Google Form Responses  
+
+This chunk creates functions that format and label survey responses from the [Google Form](https://docs.google.com/forms/d/e/1FAIpQLScYYCT2T8FhgbfYV5c6LHLVtrtcxSaBXMpgN363Atb-9C3Vdw/viewform). This will also have a functio that formats the old, manually entered data from Cohort 1, Phase 1 and Phase 2.1.
+
+```{r formatGoogleForm_funct, echo = FALSE}
+
+# format Cohort and Phase indicator variables
+format_cohortphase_factors <- function(dataset){
+  dataset %>% mutate(
+    cohort = factor(cohort, levels = survey_fct_levels[["cohort"]], labels = survey_fct_levels[["cohort"]], ordered = TRUE),
+    phase = factor(phase, levels = survey_fct_levels[["phase"]], labels = survey_fct_levels[["phase"]], ordered = TRUE)
+  )
+}
+
+# format sociodemographic factors of the YouHeaL survey
+format_sociodem_factors <- function(dataset){
+  dataset %>% mutate(
+        sex = factor(sex, levels = survey_fct_levels[["sex"]], labels = survey_fct_levels[["sex"]], ordered = FALSE),
+        language1 = factor(language1, levels = survey_fct_levels[["language1"]], labels = survey_fct_levels[["language1"]], ordered = FALSE),
+        english_prof = factor(english_prof, levels = survey_fct_levels[["english_prof"]], labels = survey_fct_levels[["english_prof"]], ordered = TRUE)
+  )
+}
+
+# format old sociodemographic factors of the YouHeaL survey
+format_sociodem_old_factors <- function(dataset){
+  dataset %>% mutate(
+    sex = factor(sex, levels = survey_fct_levels[["sex_old"]], labels = survey_fct_levels[["sex"]], ordered = FALSE),
+    language1 = factor(language1, levels = survey_fct_levels[["language1"]], labels = survey_fct_levels[["language1"]], ordered = FALSE),
+    english_prof = factor(english_prof, levels = survey_fct_levels[["english_prof_old"]], labels = survey_fct_levels[["english_prof"]], ordered = TRUE)
+  )
+}
+
+# reformat the old, manually entered (Cohort 1, Phase 1 & Phase 2.1) factor levels of the YRBS survey so they are ordered factors that match the Google Form options
+format_YRBS_old_factors <- function(dataset){
+  dataset %>% mutate(
+    Q7_YRBS_juice = factor(Q7_YRBS_juice, levels = survey_fct_levels[["Q7_old"]], labels = survey_fct_levels[["Q7"]], ordered = TRUE),
+    Q8_YRBS_fruit = factor(Q8_YRBS_fruit, levels = survey_fct_levels[["Q8_old"]], labels = survey_fct_levels[["Q8"]], ordered = TRUE),
+    Q9_YRBS_salad = factor(Q9_YRBS_salad, levels = survey_fct_levels[["Q9_old"]], labels = survey_fct_levels[["Q9"]], ordered = TRUE),
+    Q10_YRBS_potato = factor(Q10_YRBS_potato, levels = survey_fct_levels[["Q10_old"]], labels = survey_fct_levels[["Q10"]], ordered = TRUE),
+    Q11_YRBS_carrot = factor(Q11_YRBS_carrot, levels = survey_fct_levels[["Q11_old"]], labels = survey_fct_levels[["Q11"]], ordered = TRUE),
+    Q12_YRBS_otherveg = factor(Q12_YRBS_otherveg, levels = survey_fct_levels[["Q12_old"]], labels = survey_fct_levels[["Q12"]], ordered = TRUE),
+    Q13_YRBS_soda = factor(Q13_YRBS_soda, levels = survey_fct_levels[["Q13_old"]], labels = survey_fct_levels[["Q13"]], ordered = TRUE),
+    Q14_YRBS_sportdrink = factor(Q14_YRBS_sportdrink, levels = survey_fct_levels[["Q14_old"]], labels = survey_fct_levels[["Q14"]], ordered = TRUE),
+    Q15_YRBS_water = factor(Q15_YRBS_water, levels = survey_fct_levels[["Q15_old"]], labels = survey_fct_levels[["Q15"]], ordered = TRUE),
+    Q16_YRBS_milk = factor(Q16_YRBS_milk, levels = survey_fct_levels[["Q16_old"]], labels = survey_fct_levels[["Q16"]], ordered = TRUE),
+    Q17_YRBS_breakfast = factor(Q17_YRBS_breakfast, levels = survey_fct_levels[["Q17_old"]], labels = survey_fct_levels[["Q17"]], ordered = TRUE),
+    Q18_YRBS_allergy = factor(Q18_YRBS_allergy, levels = survey_fct_levels[["Q18_old"]], labels = survey_fct_levels[["Q18"]], ordered = TRUE),
+    Q19_YRBS_physical = factor(Q19_YRBS_physical, levels = survey_fct_levels[["Q19_old"]], labels = survey_fct_levels[["Q19"]], ordered = TRUE),
+    Q20_YRBS_strength = factor(Q20_YRBS_strength, levels = survey_fct_levels[["Q20_old"]], labels = survey_fct_levels[["Q20"]], ordered = TRUE),
+    Q21_YRBS_tv = factor(Q21_YRBS_tv, levels = survey_fct_levels[["Q21_old"]], labels = survey_fct_levels[["Q21"]], ordered = TRUE),
+    Q22_YRBS_screentime = factor(Q22_YRBS_screentime, levels = survey_fct_levels[["Q22_old"]], labels = survey_fct_levels[["Q22"]], ordered = TRUE),
+    Q23_YRBS_pe = factor(Q23_YRBS_pe, levels = survey_fct_levels[["Q23_old"]], labels = survey_fct_levels[["Q23"]], ordered = TRUE),
+    Q24_YRBS_sportsteam = factor(Q24_YRBS_sportsteam, levels = survey_fct_levels[["Q24_old"]], labels = survey_fct_levels[["Q24"]], ordered = TRUE),
+    Q25_YRBS_concussion = factor(Q25_YRBS_concussion, levels = survey_fct_levels[["Q25_old"]], labels = survey_fct_levels[["Q25"]], ordered = TRUE)
+  )
+  }
+
+# format the factor levels of the YRBS survey from the Google Form so they are ordered factors
+format_YRBS_factors <- function(dataset){
+  dataset %>% mutate(
+    Q7_YRBS_juice = factor(Q7_YRBS_juice, levels = survey_fct_levels[["Q7"]], labels = survey_fct_levels[["Q7"]], ordered = TRUE),
+    Q8_YRBS_fruit = factor(Q8_YRBS_fruit, levels = survey_fct_levels[["Q8"]], labels = survey_fct_levels[["Q8"]], ordered = TRUE),
+    Q9_YRBS_salad = factor(Q9_YRBS_salad, levels = survey_fct_levels[["Q9"]], labels = survey_fct_levels[["Q9"]], ordered = TRUE),
+    Q10_YRBS_potato = factor(Q10_YRBS_potato, levels = survey_fct_levels[["Q10"]], labels = survey_fct_levels[["Q10"]], ordered = TRUE),
+    Q11_YRBS_carrot = factor(Q11_YRBS_carrot, levels = survey_fct_levels[["Q11"]], labels = survey_fct_levels[["Q11"]], ordered = TRUE),
+    Q12_YRBS_otherveg = factor(Q12_YRBS_otherveg, levels = survey_fct_levels[["Q12"]], labels = survey_fct_levels[["Q12"]], ordered = TRUE),
+    Q13_YRBS_soda = factor(Q13_YRBS_soda, levels = survey_fct_levels[["Q13"]], labels = survey_fct_levels[["Q13"]], ordered = TRUE),
+    Q14_YRBS_sportdrink = factor(Q14_YRBS_sportdrink, levels = survey_fct_levels[["Q14"]], labels = survey_fct_levels[["Q14"]], ordered = TRUE),
+    Q15_YRBS_water = factor(Q15_YRBS_water, levels = survey_fct_levels[["Q15"]], labels = survey_fct_levels[["Q15"]], ordered = TRUE),
+    Q16_YRBS_milk = factor(Q16_YRBS_milk, levels = survey_fct_levels[["Q16"]], labels = survey_fct_levels[["Q16"]], ordered = TRUE),
+    Q17_YRBS_breakfast = factor(Q17_YRBS_breakfast, levels = survey_fct_levels[["Q17"]], labels = survey_fct_levels[["Q17"]], ordered = TRUE),
+    Q18_YRBS_allergy = factor(Q18_YRBS_allergy, levels = survey_fct_levels[["Q18"]], labels = survey_fct_levels[["Q18"]], ordered = TRUE),
+    Q19_YRBS_physical = factor(Q19_YRBS_physical, levels = survey_fct_levels[["Q19"]], labels = survey_fct_levels[["Q19"]], ordered = TRUE),
+    Q20_YRBS_strength = factor(Q20_YRBS_strength, levels = survey_fct_levels[["Q20"]], labels = survey_fct_levels[["Q20"]], ordered = TRUE),
+    Q21_YRBS_tv = factor(Q21_YRBS_tv, levels = survey_fct_levels[["Q21"]], labels = survey_fct_levels[["Q21"]], ordered = TRUE),
+    Q22_YRBS_screentime = factor(Q22_YRBS_screentime, levels = survey_fct_levels[["Q22"]], labels = survey_fct_levels[["Q22"]], ordered = TRUE),
+    Q23_YRBS_pe = factor(Q23_YRBS_pe, levels = survey_fct_levels[["Q23"]], labels = survey_fct_levels[["Q23"]], ordered = TRUE),
+    Q24_YRBS_sportsteam = factor(Q24_YRBS_sportsteam, levels = survey_fct_levels[["Q24"]], labels = survey_fct_levels[["Q24"]], ordered = TRUE),
+    Q25_YRBS_concussion = factor(Q25_YRBS_concussion, levels = survey_fct_levels[["Q25"]], labels = survey_fct_levels[["Q25"]], ordered = TRUE)
+  )
+  }
+
+# format the factor levels of the efficacy survey from the Google Form so they are ordered factors
+format_efficacy_factors <- function(dataset){
+  dataset %>% mutate(
+    # format efficacy survey factors
+    Q26_efficacy = factor(Q26_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q27_efficacy = factor(Q27_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q28_efficacy = factor(Q28_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q29_efficacy = factor(Q29_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q30_efficacy = factor(Q30_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q31_efficacy = factor(Q31_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q32_efficacy = factor(Q32_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q33_efficacy = factor(Q33_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q34_efficacy = factor(Q34_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE),
+    Q35_efficacy = factor(Q35_efficacy, levels = survey_fct_levels[["efficacy"]], labels = survey_fct_levels[["efficacy"]], ordered = TRUE)
+  )
+}
+
+# format the factor levels of the self-empowerment survey from the Google Form so they are ordered factors
+format_empower_factors <- function(dataset){
+  dataset %>% mutate(
+    # format empowerment survey factors
+    Q36_empower = factor(Q36_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q37_empower = factor(Q37_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q38_empower = factor(Q38_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q39_empower = factor(Q39_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q40_empower = factor(Q40_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q41_empower = factor(Q41_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q42_empower = factor(Q42_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q43_empower = factor(Q43_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q44_empower = factor(Q44_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q45_empower = factor(Q45_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q46_empower = factor(Q46_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE),
+    Q47_empower = factor(Q47_empower, levels = survey_fct_levels[["empower"]], labels = survey_fct_levels[["empower"]], ordered = TRUE)
+  )
+}
+
+
+# this function calls all the functions for the Google Form responses, in a row (i.e. it uses the "format_YRBS_factors" function instead of the "format_YRBS_old_factors" function)
+format_GoogleForms <- function(dataset){
+  dataset %>%
+    format_cohortphase_factors() %>% 
+    format_sociodem_factors() %>% 
+    format_YRBS_factors() %>% 
+    format_efficacy_factors() %>% 
+    format_empower_factors()
+}
+```
+
+
+###Manually Entered Data: Cohort 1, Phases 1 & 2.1  
+
+This chunk re-formats all the old factor levels from Phases 1 and 2.1 so they match the subsequent phases that are produced from the [Google Form](https://docs.google.com/forms/d/e/1FAIpQLScYYCT2T8FhgbfYV5c6LHLVtrtcxSaBXMpgN363Atb-9C3Vdw/viewform).
+
+```{r formatP1P2.1, echo = FALSE}
+
+yh_cohort1_p1_p2.1_labeled <- 
+  
+  # bind rows of phase 1 and phase 2.1 datasets
+  #   The phases were entered manually, and both need to be formatted to the updated google form
+  yh_cohort1_phase1 %>% rbind(yh_cohort1_phase2.1) %>% 
+  
+  # format factors in dataset so they match the Google Form responses
+  format_cohortphase_factors() %>% 
+  format_sociodem_old_factors() %>% 
+  format_YRBS_old_factors() %>% 
+  format_efficacy_factors() %>% 
+  format_empower_factors()
+```
+
+
+###Google Form-Entered Data
+
+This chunk applies the formatting and labeling functions to the Cohort 1, Phase 2.2 and Cohort 2, Phase 1 datasets. This is the first dataset to use the [Google Form](https://docs.google.com/forms/d/e/1FAIpQLScYYCT2T8FhgbfYV5c6LHLVtrtcxSaBXMpgN363Atb-9C3Vdw/viewform).  
+
+```{r formatGoogleForm_apply, echo = FALSE}
+# format the YouHeaL surveys so factors match
+
+# Cohort 1, Phase 2.2
+yh_cohort1_phase2.2_labeled <- yh_cohort1_phase2.2 %>%
+  format_cohortphase_factors() %>%
+  # had to use manually entered sociodem formatting because copied variables from Phase 1
+  format_sociodem_old_factors() %>% 
+  format_YRBS_factors() %>% 
+  format_efficacy_factors() %>% 
+  format_empower_factors()
+
+# Cohort 2, Phase 1
+yh_cohort2_phase1_labeled <- yh_cohort2_phase1 %>% format_GoogleForms()
+```
+
+
+##Merge Cohort and Phase Data  
+
+This chunk combines all the different Cohorts and Phases into a single dataset
+
+```{r mergeAll, echo = FALSE, warning = FALSE}
+analytic_cohort_raw <- yh_cohort1_p1_p2.1_labeled %>% 
+  bind_rows(yh_cohort1_phase2.2_labeled) %>% 
+  bind_rows(yh_cohort2_phase1_labeled)
+```
+
+
+##Derived Variables  
+
+Some variables need to be derived from the data. The following chunks create those variables.  
+
+
+###Derived Sociodemographic Variables  
+
+Derived sociodemographic variables include:  
+
+* Living in Los Angeles (city_LA)
+* Race Hispanic/Latino (race_HL)
+* Race African American or Black (race_AAB)
+* Race Asian (race_asian)
+* Race White only (race_wo)
+
+```{r deriveSD, echo = FALSE}
+analytic_cohort <- analytic_cohort_raw %>% 
+  mutate(
+    
+    # Indicator variable for Los Angeles residence (necessary because some entered "LA" and some entered "Los Angeles")
+    city_LA = ifelse(
+      str_detect(string = city, pattern = "LA") | str_detect(string = city, pattern = "Los Angeles"), 
+      yes = 0, 
+      no = 1
+      ),
+    city_LA = factor(city_LA, levels = c(0, 1), labels = c("Los Angeles", "Other"), ordered = TRUE),
+    
+    # Indicator variable for race: Hispanic/Latino
+    race_HL = ifelse(
+      str_detect(string = race, pattern = "Hispanic") | str_detect(string = race, pattern = "Latino") | str_detect(string = race, pattern = "Mexican"),
+      yes = 1,
+      no = 0
+      ),
+    race_HL = factor(race_HL, levels = c(0, 1), labels = c("Not Hispanic/Latino", "Hispanic/Latino"), ordered = TRUE),
+    
+    # Indicator variable for race: African American or Black
+    race_AAB = ifelse(
+      str_detect(string = race, pattern = "African American") | str_detect(string = race, pattern = "Black"),
+      yes = 1,
+      no = 0
+      ),
+    race_AAB = factor(race_AAB, levels = c(0, 1), labels = c("Not African American or Black", "African American or Black"), ordered = TRUE),
+
+    # Indicator variable for race: Asian
+    race_asian = ifelse(
+      str_detect(string = race, pattern = "Asian"),
+      yes = 1,
+      no = 0
+      ),
+    race_asian = factor(race_asian, levels = c(0, 1), labels = c("Not Asian", "Asian"), ordered = TRUE),
+
+    # Indicator variable for race: White only
+    race_wo = ifelse(
+      str_detect(string = race, pattern = "white") & race_HL == 0 & race_AAB == 0 & race_asian == 0,
+      yes = 1,
+      no = 0
+      ),
+    race_wo = factor(race_wo, levels = c(0, 1), labels = c("Not White Only", "White Only"), ordered = TRUE)    
+    )
+```
+
+
+###Derived YRBS Diet Items  
+
+Scoring the [Youth Risk Behavior Survey (YRBS)](https://www.cdc.gov/healthyyouth/data/yrbs/data.htm) Diet Items - Items Q7 to Q17  
+
+Q18 asks about allergies, and was removed from analyses per discussion with Kasra.  
+
+Each item asks about frequency of consuming various foods and beverages. 
+
+This scoring method assumes the following items are "healthy", and the more often an individual consumes them, the better:  
+
+* Q8 Fruit  
+* Q9 Salad  
+* Q10 Potatoe  
+* Q11 Carrots  
+* Q12 Other Vegetable  
+* Q15 Water  
+* Q16 Milk  
+* Q17 Breakfast  
+
+This method also assumes the following items are "unhealthy", and the less often an individual consumes them, the better:  
+
+* Q7 Juice  
+* Q13 Soda  
+* Q14 Sports Drink  
+
+The "unhealthy" items are reversed in order, so the greater the number the less often they are consumed.  
+
+Each item response is then converted to an integer value, and all points are sumed for each individual to provide an overall diet score.  
+
+This is a crude method because items Q7 to Q16 have 7 possible item responses, so possible points are 1 to 7. But Q17 (breakfast) has 8 possible items, so possible points are 1 to 8. This means the breakfast question is weighted slightly greater than the other diet items.  
+
+Possible ways to redress this are to:  
+
+* standardize all items to a 0 to 100 points scale
+* use item response theory and confirmatory factor analysis to be sure we are measuring a single construct
+* only compare items at the individual question level to [CDC data for Los Angeles](https://nccd.cdc.gov/Youthonline/App/Results.aspx?LID=CA)  
+
+```{r derivDiet, echo = FALSE}
+analytic_cohort$YRBS_diet_total <- analytic_cohort %>% select(
+  Q7_YRBS_juice, Q8_YRBS_fruit, Q9_YRBS_salad, Q10_YRBS_potato, Q11_YRBS_carrot, Q12_YRBS_otherveg, Q13_YRBS_soda, Q14_YRBS_sportdrink, Q15_YRBS_water, Q16_YRBS_milk, Q17_YRBS_breakfast
+  ) %>% 
+  
+  # Convert factor levels to integer values
+  mutate(
+    
+    ## Healthy items
+    Q8_YRBS_fruit = Q8_YRBS_fruit %>% as.integer,
+    Q9_YRBS_salad = Q9_YRBS_salad %>% as.integer,
+    Q10_YRBS_potato = Q10_YRBS_potato %>% as.integer,
+    Q11_YRBS_carrot = Q11_YRBS_carrot %>% as.integer,
+    Q12_YRBS_otherveg = Q12_YRBS_otherveg %>% as.integer,
+    Q15_YRBS_water = Q15_YRBS_water %>% as.integer,
+    Q16_YRBS_milk = Q16_YRBS_milk %>% as.integer,
+    Q17_YRBS_breakfast = Q17_YRBS_breakfast %>% as.integer,
+
+    ## Unhealthy items, factor orders are reversed
+    Q7_YRBS_juice = Q7_YRBS_juice %>% fct_rev %>% as.integer,
+    Q13_YRBS_soda = Q13_YRBS_soda %>% fct_rev %>% as.integer,
+    Q14_YRBS_sportdrink = Q14_YRBS_sportdrink %>% fct_rev %>% as.integer
+    
+  ) %>% 
+  
+  # sum the rows to get the overall YRBS diet composite
+  apply(MARGIN = 1, FUN = sum)
+
+print("Summary stats for YRBS Diet score")
+analytic_cohort$YRBS_diet_total %>% summary
+```
+
+
+###Derived YRBS Physical Items  
+
+Scoring the [Youth Risk Behavior Survey (YRBS)](https://www.cdc.gov/healthyyouth/data/yrbs/data.htm) Diet Items - Items Q19 to Q22  
+
+Q23, Q24, and Q25 asks about physical education, sports teams, and concussions, respectively. These items were from analyses per discussion with Kasra.  
+
+Each item asks about frequency of performing physical activity or sedentary behaviors.  
+
+This scoring method assumes the following items are "healthy", and the more often an individual does them, the better:  
+
+* Q19 Physical Activity  
+* Q20 Strength Training  
+
+This method also assumes the following items are "unhealthy", and the less often an individual does them, the better:  
+
+* Q21 Television  
+* Q22 Screen Time
+
+The YRBS physical activity composite is scored the sam was as the YRBS diet composite (explained above). In short, the "healthy" items are assigned integer values, the "unhealthy" items are reversed in order and assigned integer values, and then a sum is taken of all item scores to produce a composite physical score.  
+
+The same issues with scoring the YRBS diet composite exist for the YRBS physical activity composite (see above).
+
+```{r derivPhys, echo = FALSE}
+analytic_cohort$YRBS_physical_total <- analytic_cohort %>% 
+  select(Q19_YRBS_physical, Q20_YRBS_strength, Q21_YRBS_tv, Q22_YRBS_screentime) %>% 
+  
+  # Convert factor levels to integer values
+  mutate(
+    
+    ## Healthy items
+    Q19_YRBS_physical = Q19_YRBS_physical %>% as.integer,
+    Q20_YRBS_strength = Q20_YRBS_strength %>% as.integer,
+
+    ## Unhealthy items, factor orders are reversed
+    Q21_YRBS_tv = Q21_YRBS_tv %>% fct_rev %>% as.integer,
+    Q22_YRBS_screentime = Q22_YRBS_screentime %>% fct_rev %>% as.integer
+
+  ) %>% 
+  
+  # sum the rows to get the overall YRBS diet composite
+  apply(MARGIN = 1, FUN = sum)
+
+print("Summary stats for YRBS Physical Activity score")
+analytic_cohort$YRBS_physical_total %>% summary
+```
+
+
+###Derived Self-Efficacy Scores  
+
+This chunk scores the General Self-Efficacy (GSE) survey.  
+
+The total score is calculated by finding the sum of the all items. For the GSE, the total score ranges between 10 and 40, with a higher score indicating more self-efficacy.
+
+These are the weights for each possible item response:  
+
+* 1 - Not at all true  
+* 2 - Hardly true  
+* 3 - Moderately true  
+* 4 - Exactly true  
+
+```{r deriveGSE, echo = FALSE}
+# look at items from GSE survey
+# analytic_cohort %>% select(ends_with("efficacy")) %>% glimpse
+
+# function that replaces factor responses with integer weight values
+scoreGSE <- function(x){
+  ifelse(
+    x == "Not at all true", yes = 1, no = ifelse(
+      x == "Hardly true", yes = 2, no = ifelse(
+        x == "Moderately true", yes = 3, no = ifelse(
+          x == "Exactly true", yes = 4, no = NA
+        )
+      )
+    )
+  )
+}
+
+# make a variable of the total efficacy score (from 10 to 40) 
+analytic_cohort$total_efficacy <- analytic_cohort %>% 
+  select(ends_with("efficacy")) %>% 
+  # add points to each response for GSE items
+  apply(MARGIN = 2, FUN = scoreGSE) %>%
+  # sum the points for each individual during each Phase to get a total score
+  apply(MARGIN = 1, FUN = sum)
+
+
+print("Summary stats for Total Self-Efficacy score")
+analytic_cohort$total_efficacy %>% summary
+```
+
+
+###Derived Empowerment Scores  
+
+This chunk scores the [Empowerment (Emp) Survey](https://deepblue.lib.umich.edu/bitstream/handle/2027.42/51261/495.pdf?sequence=1).  
+
+These are the weights for each possible item response:  
+
+* 1 - Disagree strongly 
+* 2 - Disagree somewhat  
+* 3 - Agree somewhat   
+* 4 - Agree strongly     
+   
+Four different scores are generated for Empowerment by taking the sum of specific items:  
+
+Composite Empowerment (EmpCmp), sum items 36 to 47 (all 12 items)  
+
+Individual Empowerment (EmpInd), sum items 41 and 43 (2 items)  
+
+Community Empowerment (EmpCmn), sum item 42 and items 44 to 47 (5 items)  
+
+Organizational Empowerment (EmpOrg), sum items 36 to 40 (5 items)  
+
+```{r deriveEmp, echo = FALSE}
+# look at items from Emp survey
+# analytic_cohort %>% select(ends_with("empower")) %>% glimpse
+
+# function that replaces factor responses with integer weight values
+weightEmp <- function(x){
+  ifelse(
+    x == "Disagree strongly", yes = 1, no = ifelse(
+      x == "Disagree somewhat", yes = 2, no = ifelse(
+        x == "Agree somewhat", yes = 3, no = ifelse(
+          x == "Agree strongly", yes = 4, no = NA
+        )
+      )
+    )
+  )
+}
+
+# function that produces each empowerment score depending on which items are included
+scoreEmp <- function(item_string){
+  analytic_cohort %>% 
+    select(item_string) %>% 
+    # add points to each response for EmpCmp items
+    apply(MARGIN = 2, FUN = weightEmp) %>%
+    # sum the points for each individual during each Phase to get a total score
+    apply(MARGIN = 1, FUN = sum)
+}
+
+# creates Composite Empowerment variable (range from 12 to 48, all empowerment items - Q36 to Q47) 
+analytic_cohort$empower_composite <- scoreEmp(c("Q36_empower", "Q37_empower", "Q38_empower", "Q39_empower", "Q40_empower", "Q41_empower", "Q42_empower", "Q43_empower", "Q44_empower", "Q45_empower", "Q46_empower", "Q47_empower"))
+print("Summary stats for Composite Empowerment score")
+analytic_cohort$empower_composite %>% summary
+
+# creates Individual Empowerment variable (range from 2 to 8, empowerment items - Q41 and Q43) 
+analytic_cohort$empower_individual <- scoreEmp(c("Q41_empower", "Q43_empower"))
+print("Summary stats for Individual Empowerment score")
+analytic_cohort$empower_individual %>% summary
+
+# creates Community Empowerment variable (range from 5 to 20, empowerment items - Q42 and Q44 to Q47) 
+analytic_cohort$empower_community <- scoreEmp(c("Q42_empower", "Q44_empower", "Q45_empower", "Q46_empower", "Q47_empower"))
+print("Summary stats for Community Empowerment score")
+analytic_cohort$empower_community %>% summary
+
+# creates Organizational Empowerment variable (range from 5 to 20, empowerment items - Q36 to Q40) 
+analytic_cohort$empower_organization <- scoreEmp(c("Q36_empower", "Q37_empower", "Q38_empower", "Q39_empower", "Q40_empower"))
+print("Summary stats for Organizational Empowerment score")
+analytic_cohort$empower_organization %>% summary
+```
+
+
+###Derived Anthropometric Variables  
+
+Cutoffs for obesity are defined by the CDC as greater than or equal to the 85th percentile for measurements of both triceps skinfold (TSF) and waist curcumference (WC):  
+
+[Anthropometric Reference Data for Children and Adults: United States, 2007–2010](https://www.cdc.gov/nchs/data/series/sr_11/sr11_252.pdf)  
+
+The following are obesity cutoffs in adolescents for anthropometric variables by sex and age:  
+
+```{r obeseCut, echo = FALSE, warning = FALSE}
+
+# fill in the 85th percentile cutoffs from the CDC pdf, link above
+obesity_cutoff <- c("Male", 13, 21.8, 90.8) %>% 
+  rbind(c("Male", 14, 20.5, 93.9)) %>% 
+  rbind(c("Male", 15, 20.1, 94.8)) %>% 
+  rbind(c("Male", 16, 18.3, 99.3)) %>% 
+  rbind(c("Male", 17, 22.9, 101.6)) %>% 
+  rbind(c("Male", 18, 20.4, 101.6)) %>% 
+  rbind(c("Male", 19, 21.6, 93.9)) %>% 
+  rbind(c("Female", 13, 25.9, 92.1)) %>% 
+  rbind(c("Female", 14, 27.1, 91.2)) %>% 
+  rbind(c("Female", 15, 27.5, 95.3)) %>% 
+  rbind(c("Female", 16, 26.0, 92.2)) %>% 
+  rbind(c("Female", 17, 27.2, 95.5)) %>% 
+  rbind(c("Female", 18, 26.6, 99.6)) %>% 
+  rbind(c("Female", 19, 30.5, 103.2)) %>% 
+  as_tibble(rownames = NULL)
+
+# name the columns
+colnames(obesity_cutoff) <- c("Sex", "Age", "TSF", "WC")
+
+# format each column
+obesity_cutoff <- obesity_cutoff %>% 
+    mutate(
+    Sex = factor(Sex, levels = survey_fct_levels$sex),
+    Age = as.double(Age),
+    TSF = as.double(TSF),
+    WC = as.double(WC)
+  )
+
+# label anthropometric variables (units)
+label(obesity_cutoff$TSF) <- "Tricep Skinfold (mm)"
+label(obesity_cutoff$WC) <- "Waist Circumference (cm)"
+
+# print to screen
+obesity_cutoff %>% kable(digits = 3) %>%
+  kable_styling(
+    #bootstrap table classes
+    bootstrap_options = c("striped", "hover")
+  ) %>% 
+  pack_rows("Male", 1, 7) %>% 
+  pack_rows("Female", 8, 14)
+```
+
+```{r derivAnthro, echo = FALSE}
+
+# take the average of each anthropometric variable: triceps skinfold (TSF), wiast circumference (WC), weight (WM), height (HM)
+analytic_cohort$TSF_avg <- analytic_cohort %>% select(starts_with("TSF")) %>% apply(MARGIN = 1, FUN = mean, na.rm = TRUE)
+analytic_cohort$WC_avg <- analytic_cohort %>% select(starts_with("WC")) %>% apply(MARGIN = 1, FUN = mean, na.rm = TRUE)
+analytic_cohort$WM_avg <- analytic_cohort %>% select(starts_with("WM")) %>% apply(MARGIN = 1, FUN = mean, na.rm = TRUE)
+analytic_cohort$HM_avg <- analytic_cohort %>% select(starts_with("HM")) %>% apply(MARGIN = 1, FUN = mean, na.rm = TRUE)
+
+# obesity defined by triceps skinfold >= 85th percentile
+analytic_cohort$obesity_TSF <- analytic_cohort %>% 
+  select(sex, age, TSF_avg) %>% 
+  apply(MARGIN = 2, FUN = function(sex = analytic_cohort$sex, age = analytic_cohort$age, TSF_avg = analytic_cohort$TSF_avg){
+    ifelse(
+      sex == "Male" & age == 13 & TSF_avg >= 21.8, yes = 1, no = ifelse(
+      sex == "Male" & age == 14 & TSF_avg >= 20.5, yes = 1, no = ifelse(
+      sex == "Male" & age == 15 & TSF_avg >= 20.1, yes = 1, no = ifelse(
+      sex == "Male" & age == 16 & TSF_avg >= 18.3, yes = 1, no = ifelse(
+      sex == "Male" & age == 17 & TSF_avg >= 22.9, yes = 1, no = ifelse(
+      sex == "Male" & age == 18 & TSF_avg >= 20.4, yes = 1, no = ifelse(
+      sex == "Male" & age == 19 & TSF_avg >= 21.6, yes = 1, no = ifelse(
+      sex == "Female" & age == 13 & TSF_avg >= 25.9, yes = 1, no = ifelse(
+      sex == "Female" & age == 14 & TSF_avg >= 27.1, yes = 1, no = ifelse(
+      sex == "Female" & age == 15 & TSF_avg >= 27.5, yes = 1, no = ifelse(
+      sex == "Female" & age == 16 & TSF_avg >= 26.0, yes = 1, no = ifelse(
+      sex == "Female" & age == 17 & TSF_avg >= 27.2, yes = 1, no = ifelse(
+      sex == "Female" & age == 18 & TSF_avg >= 26.6, yes = 1, no = ifelse(
+      sex == "Female" & age == 19 & TSF_avg >= 30.5, yes = 1, no = 0
+      )))))))))))))
+    )
+  }
+  )
+
+# obesity defined by waist circumference >= 85th percentile
+analytic_cohort$obesity_WC <- analytic_cohort %>% 
+  select(sex, age, WC_avg) %>% 
+  apply(MARGIN = 2, FUN = function(sex = analytic_cohort$sex, age = analytic_cohort$age, WC_avg = analytic_cohort$WC_avg){
+    ifelse(
+      sex == "Male" & age == 13 & WC_avg >= 90.8, yes = 1, no = ifelse(
+      sex == "Male" & age == 14 & WC_avg >= 93.9, yes = 1, no = ifelse(
+      sex == "Male" & age == 15 & WC_avg >= 94.8, yes = 1, no = ifelse(
+      sex == "Male" & age == 16 & WC_avg >= 99.3, yes = 1, no = ifelse(
+      sex == "Male" & age == 17 & WC_avg >= 101.6, yes = 1, no = ifelse(
+      sex == "Male" & age == 18 & WC_avg >= 101.6, yes = 1, no = ifelse(
+      sex == "Male" & age == 19 & WC_avg >= 93.9, yes = 1, no = ifelse(
+      sex == "Female" & age == 13 & WC_avg >= 92.1, yes = 1, no = ifelse(
+      sex == "Female" & age == 14 & WC_avg >= 91.2, yes = 1, no = ifelse(
+      sex == "Female" & age == 15 & WC_avg >= 95.3, yes = 1, no = ifelse(
+      sex == "Female" & age == 16 & WC_avg >= 92.2, yes = 1, no = ifelse(
+      sex == "Female" & age == 17 & WC_avg >= 95.5, yes = 1, no = ifelse(
+      sex == "Female" & age == 18 & WC_avg >= 99.6, yes = 1, no = ifelse(
+      sex == "Female" & age == 19 & WC_avg >= 103.2, yes = 1, no = 0
+      )))))))))))))
+    )
+  }
+  )
+```
+
+
+##Label Variables  
+
+This chunk assigns labels to each variable. These labels are shown in the plots below.
+
+```{r labelVars, echo = FALSE}
+# sociodemographic variables
+label(analytic_cohort$age) <- "Age (Years)"
+label(analytic_cohort$sex) <- "Sex"
+label(analytic_cohort$city_LA) <- "In what city do you currently live?"
+label(analytic_cohort$race_HL) <- "Is your race Hispanic/Latino?"
+label(analytic_cohort$race_AAB) <- "Is your race African American or Black?"
+label(analytic_cohort$race_asian) <- "Is your race Asian?"
+label(analytic_cohort$race_wo) <- "Is your race White only?"
+label(analytic_cohort$language1) <- "What language do you mainly speak at home?"
+label(analytic_cohort$english_prof) <- "How well do you speak English?"
+
+# YRBS diet and physical activity variables
+label(analytic_cohort$YRBS_diet_total) <- "YRBS Diet Composite"
+label(analytic_cohort$YRBS_physical_total) <- "YRBS Physical Activity Composite"
+
+# self-efficacy variable
+label(analytic_cohort$total_efficacy) <- "General Self-Efficacy"
+
+# empowerment variables
+label(analytic_cohort$empower_composite) <- "Composite Empowerment"
+label(analytic_cohort$empower_individual) <- "Individual Empowerment"
+label(analytic_cohort$empower_community) <- "Community Empowerment"
+label(analytic_cohort$empower_organization) <- "Organizational Empowerment"
+
+# anthropometric variables
+label(analytic_cohort$TSF_avg) <- "Triceps Skinfold (mm)"
+label(analytic_cohort$WC_avg) <- "Waist Circumference (cm)"
+```
+
+
+##Save Phase 1 Dataset
+
+This chunk saves the dataset as a permanent R datafile. This can be used for further analysis, without having to clean the data again.
+
+```{r saveData, echo = FALSE}
+#set save location
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
+
+# Save phase 1 data file
+# save(analytic_cohort, file = "YouHeaL_analytic_cohort.RData")
+```
+
+
+#Table 1 Sociodemographics
+
+Table 1 shows sociodemographic variables, including age, sex, residence, race, and languages spoken. Table 1a shows these sociodemographics for each cohort at baseline. This is the most telling table, and should be used for future publications.
+
+Tables 1b, 1c, and 1d show these variables seperately for each cohort across all phases. Normally these tables would not be shown, but given the design of this study, it is useful to see if demographics are changing across the phases as participants are lost to follow-up. It might reveal that a certain demographic is dropping out of the study.
+
+##Table 1a
+
+###Sociodemographic Characteristics at Baseline (Phase 1)
+
+This table shows the sociodemographic characteristics of each cohort when they enter the study during Phase 1. This is the most telling table, and should be used for future publications.  
+
+```{r table1a, echo=FALSE}
+# vector of variables to be included in Table 1
+table1_vars <- c("age", "sex", "city_LA", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof")
+
+# vector of categorical variables in analytic dataset
+table1_categorical <- c("cohort", "phase", "sex", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof")
+
+# select sociodemographic variables for table1
+table1a_data <- analytic_cohort %>% 
+  filter(phase == "Phase 1") %>% 
+  # force age to be a double, not a factor
+  mutate(age = as.double(age))
+
+table1a <- CreateTableOne(data = table1a_data, strata = "cohort", vars = table1_vars, factorVars = table1_categorical, test = FALSE, includeNA = TRUE)
+
+## export table 1 to html
+table1a_html <- print(table1a, quote = FALSE, noSpaces = F, printToggle = F, varLabels = T)
+table1a_html %>% kableone(digits = 3) %>%
+  kable_styling(
+    #bootstrap table classes
+    bootstrap_options = c("striped", "hover")
+  ) %>% 
+  pack_rows("Residence", 4, 7) %>% 
+  pack_rows("Race", 8, 11) %>% 
+  pack_rows("Language", 12, 16)
+```
+
+
+##Table 1b
+
+###Sociodemographic Characteristics Across Phases in Cohort 1
+
+This plot shows the sociodemographic characteristics of Cohort 1 at each phase. This may be useful to see if a certain demographic is staying in the study relative to those who drop out. This table should not be used in publications, but is more of a check to be considered internally within the YouHeaL group as the study progresses.  
+
+Note, statistical comparisons are underpowered for Cohort 1, and should be considered unreliable. Also note, there are some variables (race, residence) where there are no differences across phases. Therefore, statistical tests are not possible.
+
+```{r table1b, echo = FALSE}
+
+# function that will compare sociodems across phases for each cohort
+table1_phase <- function(cohort_num){
+  
+  # vector of variables to be included in Table 1
+  table1_vars <- c("age", "sex", "city_LA", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof")
+  
+  # vector of categorical variables in analytic dataset
+  table1_categorical <- c("cohort", "phase", "sex", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof")
+
+  # select sociodemographic variables for table1
+  table1_data <- analytic_cohort %>% 
+    filter(cohort == cohort_num) %>% 
+    mutate(age = as.double(age))
+  
+  table1 <- CreateTableOne(data = table1_data, strata = "phase", vars = table1_vars, factorVars = table1_categorical, test = TRUE, includeNA = TRUE)
+  
+  ## export table 1 to html
+  table1_html <- print(table1, quote = FALSE, noSpaces = F, printToggle = F, varLabels = T)
+  table1_html %>% kableone(digits = 3) %>%
+    kable_styling(
+      #bootstrap table classes
+      bootstrap_options = c("striped", "hover")
+    ) %>%
+    pack_rows("Residence", 4, 4) %>% 
+    pack_rows("Race", 5, 8) %>% 
+    pack_rows("Language", 9, 10)
+}
+
+# call function for Cohort 1
+table1_phase(cohort_num = "Cohort 1")
+```
+
+
+##Table 1c
+
+###Sociodemographic Characteristics Across Phases in Cohort 2
+
+This plot shows the sociodemographic characteristics of Cohort 2 at each phase. This may be useful to see if a certain demographic is staying in the study relative to those who drop out. This table should not be used in publications, but is more of a check to be considered internally within the YouHeaL group as the study progresses.  
+
+Note, this table cannot be created until subsequent phases occur for Cohort 2. There are only data for baseline (Phase 1). But this will be useful once future phases are completed.
+
+```{r table1c, echo = FALSE}
+# call function for Cohort 2
+# table1_phase(cohort_num = "Cohort 2")
+```
+
+
+##Table 1d
+
+###Sociodemographic Characteristics Across Phases in Cohort 3
+
+This plot shows the sociodemographic characteristics of Cohort 3 at each phase. This may be useful to see if a certain demographic is staying in the study relative to those who drop out. This table should not be used in publications, but is more of a check to be considered internally within the YouHeaL group as the study progresses.  
+
+Note, this table cannot be created until subsequent phases occur for Cohort 3. No data has been collected for Cohort 3 yet. But this will be useful once multiple phases are completed for this cohort.
+
+```{r table1d, echo = FALSE}
+# call function for Cohort 3
+# table1_phase(cohort_num = "Cohort 3")
+```
+
+
+#Cohort Variation at Baseline
+
+This analysis attempts to answer the question: "How do the cohorts differ at baseline (Phase 1)?" This question applies to YRBS diet and physical activity scores, self-efficacy, empowerment, and anthropometric measurements.
+
+##Methods
+
+###Violin Plots
+
+The function below creates [violin plots](https://en.wikipedia.org/wiki/Violin_plot) of each variable at baseline by cohort. Violin plots show all the same information as boxplots, but in addition they show the distributions, similar to a histogram.  
+
+###Boxplots
+
+Boxplots are overlain on the violin plots. These are Tukey "box and whiskers" plots, where the top and bottom of the box represent the first and third quartiles (i.e. 25th and 75th percentiles), and the middle bar is the median (i.e. 50th percentile). The bottom "whisker" represents the smallest data point that is no more than 1.5 times the inter-quartile range (the distance from the first to third quartiles) below the first quartile. The top "whisker" represents the largest data point that is no more than 1.5 times the inter-quartile range above the third quartile. Points smaller or greater than these whiskers, respectively, are considered outliers and plotted individually.
+
+```{r violin_fun, echo = FALSE}
+# make a violin plot showing the distribution of YRBS Diet scores in the entire YouHeaL dataset
+violin_baseline <- function(var){
+  
+  # select only baseline measurements (Phase 1)
+  df <- analytic_cohort %>%
+    filter(phase == "Phase 1")
+  
+  # convert outcome to continuous variable
+  df$var_formatted <- as.double(df[[var]])
+  
+  # violin plot with boxplots overlain
+  df %>% 
+    ggplot(aes(y = var_formatted, x = cohort)) +
+    geom_violin(na.rm = TRUE) +
+    geom_boxplot(width = 0.1, na.rm = TRUE) +
+    scale_x_discrete(limits = rev(levels(df$cohort))) +
+    coord_flip() +
+  
+    # keep variable label as Y-axis
+    ylab(paste0(label(df[[var]]), " at Baseline (Phase 1)")) +
+    xlab("")
+}
+```
+
+
+##Overall Interpretation of Violin Plots
+
+For all variables, it appears that the participants in Cohort 1 were more similar to each other (i.e. had a smaller standard deviation) than participants in Cohort 2. This makes sense, as those who joined Cohort 1 were likely more homogeneous with greater motivation, healthier habits, and greater senses of self-efficacy and empowerment, compared to those who joined later. However, Cohort 1 may also be more similar because this cohort had about one third as many participants as the second cohort.
+
+
+##YRBS
+
+###YRBS Diet
+
+The median diet score is slightly greater for Cohort 1, but the distribution in scores is much smaller. Note the positive outlier in Cohort 2. This suggests Cohort 1 had more similar diet scores overall and were somewhat healther than Cohort 2.
+
+```{r violin_diet, echo = FALSE}
+violin_baseline(var = "YRBS_diet_total")
+```
+
+
+###YRBS Physical Activity
+
+Cohort 2 had a greater median physical activity score, and again had a larger spread (standard deviation) than Cohort 1. This suggests Cohort 2 is somewhat more active than Cohort 1.
+
+```{r violin_phys, echo = FALSE}
+violin_baseline(var = "YRBS_physical_total")
+```
+
+
+##Self-Efficacy
+
+Cohort 1 had a greater median self-efficacy score. Cohort 1 also had a much tighter distribution (smaller standard deviation) than Cohort 2. Note the positive and negative outliers in Cohort 2.
+
+```{r violin_GSE, echo = FALSE}
+violin_baseline(var = "total_efficacy")
+```
+
+
+##Empowerment
+
+###Composite Empowerment
+
+Cohort 1 had a slightly greater median composite empowerment score than Cohort 2, and much less spread (smaller standard deviation). 
+
+```{r violin_EmpCmp, echo = FALSE}
+violin_baseline(var = "empower_composite")
+```
+
+
+###Individual Empowerment
+
+Cohort 1 had a greater median individual empowerment score than Cohort 2. The standard deviation was greater for Cohort 2.
+
+Note the median (50th percentile) and the first quartile (25th percentile) are overlapping for both cohorts. This is likely because the individual empowerment score is based on only 2 items, and therefore has much less possible variation. This increases the odds of individuals having the same scores, causing data sparsity issues, and making it impossible to make full boxplots without having more participants in each cohort. 
+
+```{r violin_EmpInd, echo = FALSE}
+violin_baseline(var = "empower_individual")
+```
+
+
+###Community Empowerment
+
+Cohort 1 had a greater community empowerment score, but only slightly. Cohort 2 had slightly greater spread (standard deviation).
+
+```{r violin_EmpCmn, echo = FALSE}
+violin_baseline(var = "empower_community")
+```
+
+
+###Organizational Empowerment
+
+The cohorts had similar median scores for organizational empowerment. Cohort 2 was negatively skewed by an outlier. Note, the maximum possible score is 20 points for organizational empowerment; both cohorts are maxed out, suggesting a ceiling effect for this composite score. This suggests most participants have a high sense of empowerment in their organization (school).
+
+```{r violin_EmpOrg, echo = FALSE}
+violin_baseline(var = "empower_organization")
+```
+
+
+##Anthropometric
+
+###Triceps Skinfold
+
+The median triceps skinfold measurement was greater for Cohort 2. There were some positive outliers in this second cohort with much larger triceps skinfold measurements.  
+
+Note, these measurements are conditional on age (see table in section "Derived Anthropometric Variables"). However, the average age at Phase 1 were similar: 15.69 (0.48) for Cohort 1, and 15.30 (0.97) for Cohort 2 (see Table 1a). This suggests direct comparisons of anthropometric variables betweeen Cohorts 1 and 2 are reasonable, and Cohort 2 truly has greater triceps skinfold than Cohort 1, independent of normal growth in teenagers.
+
+```{r violin_TSF, echo = FALSE}
+violin_baseline(var = "TSF_avg")
+```
+
+
+###Waist Circumference
+
+The median waist circumference was greater for Cohort 2. There were also several outliers with relatively large waist circumference measurements.
+
+```{r violin_WC, echo = FALSE}
+violin_baseline(var = "WC_avg")
+```
+
+
+#Longitudinal Data
+
+##Methods
+
+###Spaghetti Plots
+
+[Spaghetti plots](https://en.wikipedia.org/wiki/Spaghetti_plot) can model longitudinal data over time. Each line represents an individual in the study. The line connects variable scores (YRBS Diet, Self-Efficacy, Triceps Skinfold, etc.) at each phase of the study. The thicker, red line represents the average score of all participants.  
+
+Note, some lines do not continue through all phases, indicating an individual who dropped out.
+
+Individuals have been stratified by sex to explore changes in variable scores over time for male and female sex.
+
+
+##Cohort 1
+
+```{r spaghCoh1, echo = FALSE}
+spaghetPlot <- function(variable){
+  analytic_cohort %>% filter(cohort == "Cohort 1") %>% 
+    ggplot(aes_string(x = "phase", y = variable, group = "ID")) +
+    geom_line() +
+    stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.5, color = "red") +
+    ylab(label = label(analytic_cohort[[variable]])) +
+    xlab(label = "Phases (6 Months Apart)")
+}
+
+spaghetSex <- function(variable){
+  spaghetPlot(variable) +
+    facet_grid(. ~ sex)
+}
+```
+
+
+###YRBS 
+
+####YRBS Diet
+
+```{r spaghDiet, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot("YRBS_diet_total")
+spaghetSex("YRBS_diet_total")
+```
+
+
+####YRBS Physical Activity
+
+```{r spaghPhys, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot("YRBS_physical_total")
+spaghetSex("YRBS_physical_total")
+```
+
+
+###Self-Efficacy
+
+```{r spaghGSE, echo = FALSE, warning = FALSE}
+spaghetPlot("total_efficacy")
+spaghetSex("total_efficacy")
+
+```
+
+
+###Empowerment
+
+####Composite Empowerment
+
+```{r spaghEmpCmp, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_composite")
+spaghetSex("empower_composite")
+```
+
+
+####Individual Empowerment
+
+```{r spaghEmpInd, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_individual")
+spaghetSex("empower_individual")
+
+```
+
+
+####Community Empowerment
+
+```{r spaghEmpCmn, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_community")
+spaghetSex("empower_community")
+```
+
+
+####Organizational Empowerment
+
+```{r spaghEmpOrg, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_organization")
+spaghetSex("empower_organization")
+```
+
+
+###Anthropometric
+
+####Triceps Skinfold
+
+```{r spaghTSF, echo = FALSE, warning = FALSE}
+spaghetPlot("TSF_avg")
+spaghetSex("TSF_avg")
+```
+
+
+####Waist Circumference
+```{r spaghWC, echo = FALSE, warning = FALSE}
+spaghetPlot("WC_avg")
+spaghetSex("WC_avg")
+```
+
+
+##Cohort 2
+
+Spaghetti plots for Cohort 2 cannot be created until data has been collecte for more than one phase.
+
+
+##Cohort 3
+
+Spaghetti plots for Cohort 3 cannot be created until data has been collecte for more than one phase.

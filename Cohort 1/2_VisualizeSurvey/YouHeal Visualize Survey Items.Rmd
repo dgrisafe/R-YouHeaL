@@ -1,0 +1,264 @@
+---
+title: "YouHeal Visualize Survey"
+author: "Dom"
+date: "10/15/2018"
+output: html_document
+---
+
+```{r, results = "hide"}
+#Initialize libraries to be used
+library(tidyverse)
+  #tidyverse causes LaTeX error when outputting to PDF...change to "xelatex" from PDF options. Or use      HTML
+library(haven)
+library(psych)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(stringr)
+
+#need to label variables
+library(Hmisc)
+```
+
+#Get Clean Data
+```{r}
+#load dataset
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
+load("Phase1_raw.RData")
+```
+
+#Visualizing Survey Data
+Define the function for making bar charts of survey items.
+```{r, results = "hide"}
+#function to make barcharts
+baritem <- function(itembase, titlelab, questionlab) {
+  
+#wrap the data labels so they do not distort plot size
+var1 <- str_wrap(itembase, width = 20)
+
+hist_plot <- ggplot(YH_phase1, aes(var1)) + 
+  
+  #make a barchart
+  geom_bar(position = position_dodge(preserve = 'single')) +
+  
+  #label
+  ggtitle(titlelab) +
+  xlab(questionlab) +
+  ylab("") +
+  
+  #add counts as data labels and position appropriately
+  geom_text(stat = "count", aes(label = ..count..), size = 3, hjust = -.4) +
+  
+  #Invert axes
+  coord_flip() + 
+  
+  theme(
+    #Change size of axes labels
+    text = element_text(size = 16),
+        
+    #Modify x axis category labels
+    axis.text.y = element_text(
+     #change font size
+      size = 9  
+    ),
+    
+    axis.text.x = element_text(
+      size = 10
+    ),
+    
+    #clean up the gridlines and background
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    panel.background = element_blank(), 
+    axis.line = element_line(colour = "black")
+  )
+
+  #saveplot
+  ggsave(paste(titlelab,".png",sep = ""), width = 6, height = 4 , hist_plot)
+  
+  #print bar plot
+  return(hist_plot)
+}
+```
+
+```{r}
+#set folder to ouput barchart .png files
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures & Tables/YRBS Barcharts - Phase 1")
+
+
+#Q7
+baritem(itembase = YH_phase1$base_Q7_YRBS_juice, titlelab = "Q7 - Baseline", questionlab = "Fruit Juice")
+baritem(itembase = YH_phase1$flup_Q7_YRBS_juice, titlelab = "Q7 - Follow Up", questionlab = "Fruit Juice")
+
+#Q8
+baritem(itembase = YH_phase1$base_Q8_YRBS_fruit, titlelab = "Q8 - Baseline", questionlab = "Fruit")
+baritem(itembase = YH_phase1$flup_Q8_YRBS_fruit, titlelab = "Q8 - Follow Up", questionlab = "Fruit")
+
+#Q9
+baritem(itembase = YH_phase1$base_Q9_YRBS_salad, titlelab = "Q9 - Baseline", questionlab = "Salad")
+baritem(itembase = YH_phase1$flup_Q9_YRBS_salad, titlelab = "Q9 - Follow Up", questionlab = "Salad")
+
+#Q10
+baritem(itembase = YH_phase1$base_Q10_YRBS_potato, titlelab = "Q10 - Baseline", questionlab = "Potatoe")
+baritem(itembase = YH_phase1$flup_Q10_YRBS_potato, titlelab = "Q10 - Follow Up", questionlab = "Potatoe")
+
+#Q11
+baritem(itembase = YH_phase1$base_Q11_YRBS_carrot, titlelab = "Q11 - Baseline", questionlab = "Carrot")
+baritem(itembase = YH_phase1$flup_Q11_YRBS_carrot, titlelab = "Q11 - Follow Up", questionlab = "Carrot")
+
+#Q12
+baritem(itembase = YH_phase1$base_Q12_YRBS_otherveg, titlelab = "Q12 - Baseline", questionlab = "Other Vegetable")
+baritem(itembase = YH_phase1$flup_Q12_YRBS_otherveg, titlelab = "Q12 - Follow Up", questionlab = "Other Vegetable")
+
+#Q13
+baritem(itembase = YH_phase1$base_Q13_YRBS_soda, titlelab = "Q13 - Baseline", questionlab = "Soda")
+baritem(itembase = YH_phase1$flup_Q13_YRBS_soda, titlelab = "Q13 - Follow Up", questionlab = "Soda")
+
+#Q14
+baritem(itembase = YH_phase1$base_Q14_YRBS_sportdrink, titlelab = "Q14 - Baseline", questionlab = "Sport Drink")
+baritem(itembase = YH_phase1$flup_Q14_YRBS_sportdrink, titlelab = "Q14 - Follow Up", questionlab = "Sport Drink")
+
+#Q15
+baritem(itembase = YH_phase1$base_Q15_YRBS_water, titlelab = "Q15 - Baseline", questionlab = "Water")
+baritem(itembase = YH_phase1$flup_Q15_YRBS_water, titlelab = "Q15 - Follow Up", questionlab = "Water")
+
+#Q16
+baritem(itembase = YH_phase1$base_Q16_YRBS_milk, titlelab = "Q16 - Baseline", questionlab = "Milk")
+baritem(itembase = YH_phase1$flup_Q16_YRBS_milk, titlelab = "Q16 - Follow Up", questionlab = "Milk")
+
+#Q17
+baritem(itembase = YH_phase1$base_Q17_YRBS_breakfast, titlelab = "Q17 - Baseline", questionlab = "Breakfast")
+baritem(itembase = YH_phase1$flup_Q17_YRBS_breakfast, titlelab = "Q17 - Follow Up", questionlab = "Breakfast")
+
+#Q18
+baritem(itembase = YH_phase1$base_Q18_YRBS_allergy, titlelab = "Q18 - Baseline", questionlab = "Allergy")
+baritem(itembase = YH_phase1$flup_Q18_YRBS_allergy, titlelab = "Q18 - Follow Up", questionlab = "Allergy")
+
+#Q19
+baritem(itembase = YH_phase1$base_Q19_YRBS_physical, titlelab = "Q19 - Baseline", questionlab = "Physical")
+baritem(itembase = YH_phase1$flup_Q19_YRBS_physical, titlelab = "Q19 - Follow Up", questionlab = "Physical")
+
+#Q20
+baritem(itembase = YH_phase1$base_Q20_YRBS_strength, titlelab = "Q20 - Baseline", questionlab = "Strength")
+baritem(itembase = YH_phase1$flup_Q20_YRBS_strength, titlelab = "Q20 - Follow Up", questionlab = "Strength")
+
+#Q21
+baritem(itembase = YH_phase1$base_Q21_YRBS_tv, titlelab = "Q21 - Baseline", questionlab = "Television")
+baritem(itembase = YH_phase1$flup_Q21_YRBS_tv, titlelab = "Q21 - Follow Up", questionlab = "Television")
+
+
+#Q22
+baritem(itembase = YH_phase1$base_Q22_YRBS_screentime, titlelab = "Q22 - Baseline", questionlab = "Screen Time")
+baritem(itembase = YH_phase1$flup_Q22_YRBS_screentime, titlelab = "Q22 - Follow Up", questionlab = "Screen Time")
+
+#Q23
+baritem(itembase = YH_phase1$base_Q23_YRBS_pe, titlelab = "Q23 - Baseline", questionlab = "Physical Education")
+baritem(itembase = YH_phase1$flup_Q23_YRBS_pe, titlelab = "Q23 - Follow Up", questionlab = "Physical Education")
+
+#Q24
+baritem(itembase = YH_phase1$base_Q24_YRBS_sportsteam, titlelab = "Q24 - Baseline", questionlab = "Sports Team")
+baritem(itembase = YH_phase1$flup_Q24_YRBS_sportsteam, titlelab = "Q24 - Follow Up", questionlab = "Sports Team")
+
+#Q25
+baritem(itembase = YH_phase1$base_Q25_YRBS_concussion, titlelab = "Q25 - Baseline", questionlab = "Concussion")
+baritem(itembase = YH_phase1$flup_Q25_YRBS_concussion, titlelab = "Q25 - Follow Up", questionlab = "Concussion")
+```
+
+#Self efficacy bar charts
+```{r}
+#set folder to ouput barchart .png files
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures & Tables/Self Efficacy - Phase 1")
+
+#Q26
+baritem(itembase = YH_phase1$base_Q26_efficacy, titlelab = "Q26 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q26_efficacy, titlelab = "Q26 - Follow Up", questionlab = "Efficacy")
+
+#Q27
+baritem(itembase = YH_phase1$base_Q27_efficacy, titlelab = "Q27 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q27_efficacy, titlelab = "Q27 - Follow Up", questionlab = "Efficacy")
+
+#Q28
+baritem(itembase = YH_phase1$base_Q28_efficacy, titlelab = "Q28 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q28_efficacy, titlelab = "Q28 - Follow Up", questionlab = "Efficacy")
+
+#Q29
+baritem(itembase = YH_phase1$base_Q29_efficacy, titlelab = "Q29 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q29_efficacy, titlelab = "Q29 - Follow Up", questionlab = "Efficacy")
+
+#Q30
+baritem(itembase = YH_phase1$base_Q30_efficacy, titlelab = "Q30 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q30_efficacy, titlelab = "Q30 - Follow Up", questionlab = "Efficacy")
+
+#Q31
+baritem(itembase = YH_phase1$base_Q31_efficacy, titlelab = "Q31 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q31_efficacy, titlelab = "Q31 - Follow Up", questionlab = "Efficacy")
+
+#Q32
+baritem(itembase = YH_phase1$base_Q32_efficacy, titlelab = "Q32 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q32_efficacy, titlelab = "Q32 - Follow Up", questionlab = "Efficacy")
+
+#Q33
+baritem(itembase = YH_phase1$base_Q33_efficacy, titlelab = "Q33 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q33_efficacy, titlelab = "Q33 - Follow Up", questionlab = "Efficacy")
+
+#Q34
+baritem(itembase = YH_phase1$base_Q34_efficacy, titlelab = "Q34 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q34_efficacy, titlelab = "Q34 - Follow Up", questionlab = "Efficacy")
+
+#Q35
+baritem(itembase = YH_phase1$base_Q35_efficacy, titlelab = "Q35 - Baseline", questionlab = "Efficacy")
+baritem(itembase = YH_phase1$flup_Q35_efficacy, titlelab = "Q35 - Follow Up", questionlab = "Efficacy")
+```
+
+```{r}
+#set folder to ouput barchart .png files
+setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Figures & Tables/Empowerment - Phase 1")
+
+#Q36
+baritem(itembase = YH_phase1$base_Q36_empower, titlelab = "Q36 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q36_empower, titlelab = "Q36 - Follow Up", questionlab = "Empowerment")
+
+#Q37
+baritem(itembase = YH_phase1$base_Q37_empower, titlelab = "Q37 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q37_empower, titlelab = "Q37 - Follow Up", questionlab = "Empowerment")
+
+#Q38
+baritem(itembase = YH_phase1$base_Q38_empower, titlelab = "Q38 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q38_empower, titlelab = "Q38 - Follow Up", questionlab = "Empowerment")
+
+#Q39
+baritem(itembase = YH_phase1$base_Q39_empower, titlelab = "Q39 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q39_empower, titlelab = "Q39 - Follow Up", questionlab = "Empowerment")
+
+#Q40
+baritem(itembase = YH_phase1$base_Q40_empower, titlelab = "Q40 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q40_empower, titlelab = "Q40 - Follow Up", questionlab = "Empowerment")
+
+#Q41
+baritem(itembase = YH_phase1$base_Q41_empower, titlelab = "Q41 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q41_empower, titlelab = "Q41 - Follow Up", questionlab = "Empowerment")
+
+#Q42
+baritem(itembase = YH_phase1$base_Q42_empower, titlelab = "Q42 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q42_empower, titlelab = "Q42 - Follow Up", questionlab = "Empowerment")
+
+#Q43
+baritem(itembase = YH_phase1$base_Q43_empower, titlelab = "Q43 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q43_empower, titlelab = "Q43 - Follow Up", questionlab = "Empowerment")
+
+#Q44
+baritem(itembase = YH_phase1$base_Q44_empower, titlelab = "Q44 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q44_empower, titlelab = "Q44 - Follow Up", questionlab = "Empowerment")
+
+#Q45
+baritem(itembase = YH_phase1$base_Q45_empower, titlelab = "Q45 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q45_empower, titlelab = "Q45 - Follow Up", questionlab = "Empowerment")
+
+#Q46
+baritem(itembase = YH_phase1$base_Q46_empower, titlelab = "Q46 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q46_empower, titlelab = "Q46 - Follow Up", questionlab = "Empowerment")
+
+#Q47
+baritem(itembase = YH_phase1$base_Q47_empower, titlelab = "Q47 - Baseline", questionlab = "Empowerment")
+baritem(itembase = YH_phase1$flup_Q47_empower, titlelab = "Q47 - Follow Up", questionlab = "Empowerment")
+```

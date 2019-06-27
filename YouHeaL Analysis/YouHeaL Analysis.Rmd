@@ -4,9 +4,28 @@ author: "Dom Grisafe"
 date: "6/10/2019"
 output:
   html_document:
-    toc: true
-    toc_float: true
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    standalone: true
+    self-contained: true
 ---
+
+```{r, include = FALSE}
+# Include the following in the YAML header to make an html file:
+# output:
+#   html_document:
+#     df_print: paged
+#     toc: yes
+#     toc_float: yes
+#     standalone: true
+#     self-contained: true
+
+# Include the following in the YAML header to make an landscape PDF file:
+# output: pdf_document
+# classoption: landscape
+```
+
 
 ```{r, include = FALSE}
 #Initialize libraries to be used
@@ -1832,6 +1851,11 @@ spaghetSex <- function(variable){
 
 ```{r spaghDiet, echo = FALSE, warning = FALSE, message = FALSE}
 spaghetPlot("YRBS_diet_total")
+```
+
+####YRBS Diet by Sex
+
+```{r spaghDiet_sex, echo = FALSE, warning = FALSE, message = FALSE}
 spaghetSex("YRBS_diet_total")
 ```
 
@@ -1840,6 +1864,11 @@ spaghetSex("YRBS_diet_total")
 
 ```{r spaghPhys, echo = FALSE, warning = FALSE, message = FALSE}
 spaghetPlot("YRBS_physical_total")
+```
+
+####YRBS Physical Activity by Sex
+
+```{r spaghPhys_sex, echo = FALSE, warning = FALSE, message = FALSE}
 spaghetSex("YRBS_physical_total")
 ```
 
@@ -1848,9 +1877,14 @@ spaghetSex("YRBS_physical_total")
 
 ```{r spaghGSE, echo = FALSE, warning = FALSE}
 spaghetPlot("total_efficacy")
-spaghetSex("total_efficacy")
-
 ```
+
+###Self-Efficacy by Sex
+
+```{r spaghGSE_sex, echo = FALSE, warning = FALSE}
+spaghetSex("total_efficacy")
+```
+
 
 
 ###Empowerment
@@ -1859,33 +1893,56 @@ spaghetSex("total_efficacy")
 
 ```{r spaghEmpCmp, echo = FALSE, warning = FALSE}
 spaghetPlot("empower_composite")
+```
+
+####Composite Empowerment by Sex
+
+```{r spaghEmpCmp_sex, echo = FALSE, warning = FALSE}
 spaghetSex("empower_composite")
 ```
+
 
 
 ####Individual Empowerment
 
 ```{r spaghEmpInd, echo = FALSE, warning = FALSE}
 spaghetPlot("empower_individual")
-spaghetSex("empower_individual")
-
 ```
+
+####Individual Empowerment by Sex
+
+```{r spaghEmpInd_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_individual")
+```
+
 
 
 ####Community Empowerment
 
 ```{r spaghEmpCmn, echo = FALSE, warning = FALSE}
 spaghetPlot("empower_community")
+```
+
+####Community Empowerment by Sex
+
+```{r spaghEmpCmn_sex, echo = FALSE, warning = FALSE}
 spaghetSex("empower_community")
 ```
+
 
 
 ####Organizational Empowerment
 
 ```{r spaghEmpOrg, echo = FALSE, warning = FALSE}
 spaghetPlot("empower_organization")
+```
+
+####Organizational Empowerment by Sex
+
+```{r spaghEmpOrg_sex, echo = FALSE, warning = FALSE}
 spaghetSex("empower_organization")
 ```
+
 
 
 ###Anthropometric
@@ -1894,15 +1951,28 @@ spaghetSex("empower_organization")
 
 ```{r spaghTSF, echo = FALSE, warning = FALSE}
 spaghetPlot("TSF_avg")
+```
+
+####Triceps Skinfold by Sex
+
+```{r spaghTSF_sex, echo = FALSE, warning = FALSE}
 spaghetSex("TSF_avg")
 ```
 
 
+
 ####Waist Circumference
+
 ```{r spaghWC, echo = FALSE, warning = FALSE}
 spaghetPlot("WC_avg")
+```
+
+####Waist Circumference by Sex
+
+```{r spaghWC_sex, echo = FALSE, warning = FALSE}
 spaghetSex("WC_avg")
 ```
+
 
 
 ##Cohort 2

@@ -8,6 +8,7 @@ output:
     self-contained: yes
     standalone: yes
     toc: yes
+    toc_depth: 2
     toc_float: yes
 always_allow_html: yes
 ---
@@ -49,6 +50,16 @@ library(Hmisc)
 # libraries for longitudinal data analysis, from the datacamp package
 library(lme4)
 library(nlme)
+
+# function that sets manual colors on plots
+yh_cohort_colors <- function(){
+  # color patterns for cohorts
+  col_cohort1 <- "#cc6666"
+  col_cohort2 <- "#33cccc"
+  col_cohort3 <- "#99cc33"
+  
+  scale_color_manual(values=c("Cohort 1" = col_cohort1, "Cohort 2" = col_cohort2, "Cohort 3" = col_cohort3))
+}
 ```
 
 
@@ -63,7 +74,7 @@ During the first 6 months the first cohort is trained as Community Health Promot
 Each cohort is larger than the last, propagating healthy lifestyle habits to increasingly larger groups of high school students through their social networks.
 
 
-#Data Management
+#Data Management{.tabset}
 
 The following steps are documented to explain how the data has been cleaned before the analysis. It is not important for most people to understand this, but it is written here to explain the data management process to future analysts.
 
@@ -1113,7 +1124,7 @@ format_empower_factors <- function(dataset){
 }
 
 
-# this function calls all the functions for the Google Form responses, in a row (i.e. it uses the "format_YRBS_factors" function instead of the "format_YRBS_old_factors" function)
+# this function calls the "format_YRBS_old_factors" function instead of the "format_YRBS_factors" function
 format_GoogleForms_old <- function(dataset){
   dataset %>%
     format_cohortphase_factors() %>%
@@ -1141,12 +1152,16 @@ format_GoogleForms <- function(dataset){
 This chunk re-formats all the old factor levels from Phases 1 and 2.1 so they match the subsequent phases that are produced from the [Google Form](https://docs.google.com/forms/d/e/1FAIpQLScYYCT2T8FhgbfYV5c6LHLVtrtcxSaBXMpgN363Atb-9C3Vdw/viewform).
 
 ```{r formatP1P2.1, echo = FALSE}
-
 yh_cohort1_p1_p2.1_labeled <- 
   # bind rows of phase 1 and phase 2.1 datasets
   yh_cohort1_phase1 %>% rbind(yh_cohort1_phase2.1) %>% 
   #   The phases were entered manually, both formating to updated google form
-  format_GoogleForms_old()
+  format_cohortphase_factors() %>%
+  # had to use manually entered sociodem formatting because copied variables from Phase 1
+  format_sociodem_old_factors() %>% 
+  format_YRBS_old_factors() %>% 
+  format_efficacy_factors() %>% 
+  format_empower_factors()
 ```
 
 
@@ -1156,7 +1171,6 @@ This chunk applies the formatting and labeling functions to the Cohort 1, Phase 
 
 ```{r formatGoogleForm_apply, echo = FALSE}
 # format the YouHeaL surveys so factors match
-
 
 # Cohort 1
 
@@ -1170,7 +1184,6 @@ This chunk applies the formatting and labeling functions to the Cohort 1, Phase 
     # had to use manually entered sociodem formatting because copied variables from Phase 1
     format_GoogleForms_old()
 
-    
 # Cohort 2
 
   # Cohort 2, Phase 1
@@ -1178,7 +1191,6 @@ This chunk applies the formatting and labeling functions to the Cohort 1, Phase 
   
   # Cohort 2, Phase 2.1
   yh_cohort2_phase2.1_labeled <- yh_cohort2_phase2.1 %>% format_GoogleForms()
-
 ```
 
 
@@ -1222,10 +1234,10 @@ analytic_cohort <- analytic_cohort_raw %>%
     # Indicator variable for Los Angeles residence (necessary because some entered "LA" and some entered "Los Angeles")
     city_LA = ifelse(
       str_detect(string = city, pattern = "LA") | str_detect(string = city, pattern = "Los Angeles"), 
-      yes = 0, 
-      no = 1
+      yes = 1, 
+      no = 0
       ),
-    city_LA = factor(city_LA, levels = c(0, 1), labels = c("Los Angeles", "Other"), ordered = TRUE),
+    city_LA = factor(city_LA, levels = c(1, 0), labels = c("Los Angeles", "Other"), ordered = TRUE),
     
     # Indicator variable for race: Hispanic/Latino
     race_HL = ifelse(
@@ -1301,8 +1313,7 @@ Possible ways to redress this are to:
 
 ```{r derivDiet, echo = FALSE}
 analytic_cohort$YRBS_diet_total <- analytic_cohort %>% select(
-  Q7_YRBS_juice, Q8_YRBS_fruit, Q9_YRBS_salad, Q10_YRBS_potato, Q11_YRBS_carrot, Q12_YRBS_otherveg, Q13_YRBS_soda, Q14_YRBS_sportdrink, Q15_YRBS_water, Q16_YRBS_milk, Q17_YRBS_breakfast
-  ) %>% 
+  Q7_YRBS_juice, Q8_YRBS_fruit, Q9_YRBS_salad, Q10_YRBS_potato, Q11_YRBS_carrot, Q12_YRBS_otherveg, Q13_YRBS_soda, Q14_YRBS_sportdrink, Q15_YRBS_water, Q16_YRBS_milk, Q17_YRBS_breakfast) %>% 
   
   # Convert factor levels to integer values
   mutate(
@@ -1325,10 +1336,13 @@ analytic_cohort$YRBS_diet_total <- analytic_cohort %>% select(
   ) %>% 
   
   # sum the rows to get the overall YRBS diet composite
-  apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
+  apply(MARGIN = 1, FUN = sum, na.rm = FALSE) 
 
 print("Summary stats for YRBS Diet score")
 analytic_cohort$YRBS_diet_total %>% summary
+
+test <- analytic_cohort %>% select(ID, cohort, phase, YRBS_diet_total,
+  Q7_YRBS_juice, Q8_YRBS_fruit, Q9_YRBS_salad, Q10_YRBS_potato, Q11_YRBS_carrot, Q12_YRBS_otherveg, Q13_YRBS_soda, Q14_YRBS_sportdrink, Q15_YRBS_water, Q16_YRBS_milk, Q17_YRBS_breakfast)
 ```
 
 
@@ -1372,7 +1386,7 @@ analytic_cohort$YRBS_physical_total <- analytic_cohort %>%
   ) %>% 
   
   # sum the rows to get the overall YRBS diet composite
-  apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
+  apply(MARGIN = 1, FUN = sum, na.rm = FALSE)
 
 print("Summary stats for YRBS Physical Activity score")
 analytic_cohort$YRBS_physical_total %>% summary
@@ -1415,8 +1429,7 @@ analytic_cohort$total_efficacy <- analytic_cohort %>%
   # add points to each response for GSE items
   apply(MARGIN = 2, FUN = scoreGSE) %>%
   # sum the points for each individual during each Phase to get a total score
-  apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
-
+  apply(MARGIN = 1, FUN = sum, na.rm = FALSE)
 
 print("Summary stats for Total Self-Efficacy score")
 analytic_cohort$total_efficacy %>% summary
@@ -1468,7 +1481,7 @@ scoreEmp <- function(item_string){
     # add points to each response for EmpCmp items
     apply(MARGIN = 2, FUN = weightEmp) %>%
     # sum the points for each individual during each Phase to get a total score
-    apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
+    apply(MARGIN = 1, FUN = sum, na.rm = FALSE)
 }
 
 # creates Composite Empowerment variable (range from 12 to 48, all empowerment items - Q36 to Q47) 
@@ -1652,15 +1665,13 @@ setwd(data.path.c1.p1p2)
 ```
 
 
-#Table 1 Sociodemographics
+#Table 1 Sociodemographics{.tabset}
 
 Table 1 shows sociodemographic variables, including age, sex, residence, race, and languages spoken. Table 1a shows these sociodemographics for each cohort at baseline. This is the most telling table, and should be used for future publications.
 
 Tables 1b, 1c, and 1d show these variables seperately for each cohort across all phases. Normally these tables would not be shown, but given the design of this study, it is useful to see if demographics are changing across the phases as participants are lost to follow-up. It might reveal that a certain demographic is dropping out of the study.
 
-##Table 1a
-
-###Sociodemographic Characteristics at Baseline (Phase 1)
+##Table 1a: Baseline (Phase 1) Sociodemographics
 
 This table shows the sociodemographic characteristics of each cohort when they enter the study during Phase 1. This is the most telling table, and should be used for future publications.  
 
@@ -1687,14 +1698,12 @@ table1a_html %>% kableone(digits = 3) %>%
     bootstrap_options = c("striped", "hover")
   ) %>% 
   pack_rows("Residence", 4, 7) %>% 
-  pack_rows("Race", 8, 11) %>% 
-  pack_rows("Language", 12, 16)
+  pack_rows("Race", 8, 11) 
+  # pack_rows("Language", 12, 16)
 ```
 
 
-##Table 1b
-
-###Sociodemographic Characteristics Across Phases in Cohort 1
+##Table 1b: Cohort 1 Sociodemographics
 
 This plot shows the sociodemographic characteristics of Cohort 1 at each phase. This may be useful to see if a certain demographic is staying in the study relative to those who drop out. This table should not be used in publications, but is more of a check to be considered internally within the YouHeaL group as the study progresses.  
 
@@ -1709,7 +1718,7 @@ table1_phase <- function(cohort_num){
   table1_vars <- c("age", "sex", "city_LA", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof")
   
   # vector of categorical variables in analytic dataset
-  table1_categorical <- c("cohort", "phase", "sex", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof")
+  table1_categorical <- c("cohort", "phase", "city_LA", "sex", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof")
 
   # select sociodemographic variables for table1
   table1_data <- analytic_cohort %>% 
@@ -1735,9 +1744,7 @@ table1_phase(cohort_num = "Cohort 1")
 ```
 
 
-##Table 1c
-
-###Sociodemographic Characteristics Across Phases in Cohort 2
+##Table 1c: Cohort 2 Sociodemographics
 
 This plot shows the sociodemographic characteristics of Cohort 2 at each phase. This may be useful to see if a certain demographic is staying in the study relative to those who drop out. This table should not be used in publications, but is more of a check to be considered internally within the YouHeaL group as the study progresses.  
 
@@ -1745,13 +1752,11 @@ Note, this table cannot be created until subsequent phases occur for Cohort 2. T
 
 ```{r table1c, echo = FALSE}
 # call function for Cohort 2
-# table1_phase(cohort_num = "Cohort 2")
+table1_phase(cohort_num = "Cohort 2")
 ```
 
 
-##Table 1d
-
-###Sociodemographic Characteristics Across Phases in Cohort 3
+##Table 1d: Cohort 3 Sociodemographics
 
 This plot shows the sociodemographic characteristics of Cohort 3 at each phase. This may be useful to see if a certain demographic is staying in the study relative to those who drop out. This table should not be used in publications, but is more of a check to be considered internally within the YouHeaL group as the study progresses.  
 
@@ -1763,7 +1768,7 @@ Note, this table cannot be created until subsequent phases occur for Cohort 3. N
 ```
 
 
-#Cohort Variation at Baseline
+#Baseline Exploratory Data Analysis
 
 This analysis attempts to answer the question: "How do the cohorts differ at baseline (Phase 1)?" This question applies to YRBS diet and physical activity scores, self-efficacy, empowerment, and anthropometric measurements.
 
@@ -1783,6 +1788,9 @@ violin_baseline <- function(var){
   
   # select only baseline measurements (Phase 1)
   df <- analytic_cohort %>%
+    # remove missing variable
+    filter(!is.na(var)) %>% 
+    # restrict to baseline, Phase 1 measurements
     filter(phase == "Phase 1")
   
   # convert outcome to continuous variable
@@ -1790,12 +1798,15 @@ violin_baseline <- function(var){
   
   # violin plot with boxplots overlain
   df %>% 
-    ggplot(aes(y = var_formatted, x = cohort)) +
+    ggplot(aes(y = var_formatted, x = cohort, color = cohort)) +
     geom_violin(na.rm = TRUE) +
     geom_boxplot(width = 0.1, na.rm = TRUE) +
+    # add theme colors (set in first chunk)
+    yh_cohort_colors() +
+    # remove legend
+    theme(legend.position = "none") +
     scale_x_discrete(limits = rev(levels(df$cohort))) +
     coord_flip() +
-  
     # keep variable label as Y-axis
     ylab(paste0(label(df[[var]]), " at Baseline (Phase 1)")) +
     xlab("")
@@ -1803,14 +1814,14 @@ violin_baseline <- function(var){
 ```
 
 
-##Overall Interpretation of Violin Plots
+##Overall Violin Plot Interpretation{.tabset}
 
 For all variables, it appears that the participants in Cohort 1 were more similar to each other (i.e. had a smaller standard deviation) than participants in Cohort 2. This makes sense, as those who joined Cohort 1 were likely more homogeneous with greater motivation, healthier habits, and greater senses of self-efficacy and empowerment, compared to those who joined later. However, Cohort 1 may also be more similar because this cohort had about one third as many participants as the second cohort.
 
 
-##YRBS
+###YRBS
 
-###YRBS Diet
+####YRBS Diet
 
 The median diet score is slightly greater for Cohort 1, but the distribution in scores is much smaller. Note the positive outlier in Cohort 2. This suggests Cohort 1 had more similar diet scores overall and were somewhat healther than Cohort 2.
 
@@ -1819,7 +1830,7 @@ violin_baseline(var = "YRBS_diet_total")
 ```
 
 
-###YRBS Physical Activity
+####YRBS Physical Activity
 
 Cohort 2 had a greater median physical activity score, and again had a larger spread (standard deviation) than Cohort 1. This suggests Cohort 2 is somewhat more active than Cohort 1.
 
@@ -1828,7 +1839,7 @@ violin_baseline(var = "YRBS_physical_total")
 ```
 
 
-##Self-Efficacy
+###Self-Efficacy
 
 Cohort 1 had a greater median self-efficacy score. Cohort 1 also had a much tighter distribution (smaller standard deviation) than Cohort 2. Note the positive and negative outliers in Cohort 2.
 
@@ -1837,9 +1848,9 @@ violin_baseline(var = "total_efficacy")
 ```
 
 
-##Empowerment
+###Empowerment
 
-###Composite Empowerment
+####Composite Empowerment
 
 Cohort 1 had a slightly greater median composite empowerment score than Cohort 2, and much less spread (smaller standard deviation). 
 
@@ -1848,7 +1859,7 @@ violin_baseline(var = "empower_composite")
 ```
 
 
-###Individual Empowerment
+####Individual Empowerment
 
 Cohort 1 had a greater median individual empowerment score than Cohort 2. The standard deviation was greater for Cohort 2.
 
@@ -1859,7 +1870,7 @@ violin_baseline(var = "empower_individual")
 ```
 
 
-###Community Empowerment
+####Community Empowerment
 
 Cohort 1 had a greater community empowerment score, but only slightly. Cohort 2 had slightly greater spread (standard deviation).
 
@@ -1868,7 +1879,7 @@ violin_baseline(var = "empower_community")
 ```
 
 
-###Organizational Empowerment
+####Organizational Empowerment
 
 The cohorts had similar median scores for organizational empowerment. Cohort 2 was negatively skewed by an outlier. Note, the maximum possible score is 20 points for organizational empowerment; both cohorts are maxed out, suggesting a ceiling effect for this composite score. This suggests most participants have a high sense of empowerment in their organization (school).
 
@@ -1877,9 +1888,9 @@ violin_baseline(var = "empower_organization")
 ```
 
 
-##Anthropometric
+###Anthropometric
 
-###Triceps Skinfold
+####Triceps Skinfold
 
 The median triceps skinfold measurement was greater for Cohort 2. There were some positive outliers in this second cohort with much larger triceps skinfold measurements.  
 
@@ -1890,7 +1901,7 @@ violin_baseline(var = "TSF_avg")
 ```
 
 
-###Waist Circumference
+####Waist Circumference
 
 The median waist circumference was greater for Cohort 2. There were also several outliers with relatively large waist circumference measurements.
 
@@ -1899,7 +1910,7 @@ violin_baseline(var = "WC_avg")
 ```
 
 
-#Longitudinal Data
+#Visualizing Raw Trajectories
 
 ##Methods
 
@@ -1911,22 +1922,32 @@ Note, some lines do not continue through all phases, indicating an individual wh
 
 Individuals have been stratified by sex to explore changes in variable scores over time for male and female sex.
 
+##Overall Longitudinal Interpretation{.tabset}
 
-##Cohort 1
 
-```{r spaghCoh1, echo = FALSE}
-spaghetPlot <- function(variable){
-  analytic_cohort %>% filter(cohort == "Cohort 1") %>% 
-    ggplot(aes_string(x = "phase", y = variable, group = "ID")) +
+```{r all.spaghCoh1, echo = FALSE}
+spaghetPlot_all <- function(variable){
+  analytic_cohort %>% 
+    # remove missing variable
+    filter(!is.na(cohort)) %>%
+    ggplot(aes_string(x = "phase", y = variable, group = "ID", color = "cohort")) +
     geom_line() +
-    stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.5, color = "red") +
+    # add theme colors (set in first chunk)
+    yh_cohort_colors() +
+    # remove legend
+    theme(legend.position = "none") +
+    stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.5, color = "black", linetype = 2) +
     ylab(label = label(analytic_cohort[[variable]])) +
     xlab(label = "Phases (6 Months Apart)")
 }
 
-spaghetSex <- function(variable){
-  spaghetPlot(variable) +
-    facet_grid(. ~ sex)
+spaghetSex_all <- function(variable){
+  spaghetPlot_all(variable) +
+    facet_grid(. ~ sex) +
+    theme(
+      # rotate x-axis labels
+      axis.text.x = element_text(size = 8)
+    )
 }
 ```
 
@@ -1935,40 +1956,40 @@ spaghetSex <- function(variable){
 
 ####YRBS Diet
 
-```{r spaghDiet, echo = FALSE, warning = FALSE, message = FALSE}
-spaghetPlot("YRBS_diet_total")
+```{r all.spaghDiet, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot_all("YRBS_diet_total")
 ```
 
 ####YRBS Diet by Sex
 
-```{r spaghDiet_sex, echo = FALSE, warning = FALSE, message = FALSE}
-spaghetSex("YRBS_diet_total")
+```{r all.spaghDiet_sex, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetSex_all("YRBS_diet_total")
 ```
 
 
 ####YRBS Physical Activity
 
-```{r spaghPhys, echo = FALSE, warning = FALSE, message = FALSE}
-spaghetPlot("YRBS_physical_total")
+```{r all.spaghPhys, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot_all("YRBS_physical_total")
 ```
 
 ####YRBS Physical Activity by Sex
 
-```{r spaghPhys_sex, echo = FALSE, warning = FALSE, message = FALSE}
-spaghetSex("YRBS_physical_total")
+```{r all.spaghPhys_sex, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetSex_all("YRBS_physical_total")
 ```
 
 
 ###Self-Efficacy
 
-```{r spaghGSE, echo = FALSE, warning = FALSE}
-spaghetPlot("total_efficacy")
+```{r all.spaghGSE, echo = FALSE, warning = FALSE}
+spaghetPlot_all("total_efficacy")
 ```
 
-###Self-Efficacy by Sex
+####Self-Efficacy by Sex
 
-```{r spaghGSE_sex, echo = FALSE, warning = FALSE}
-spaghetSex("total_efficacy")
+```{r all.spaghGSE_sex, echo = FALSE, warning = FALSE}
+spaghetSex_all("total_efficacy")
 ```
 
 
@@ -1977,56 +1998,56 @@ spaghetSex("total_efficacy")
 
 ####Composite Empowerment
 
-```{r spaghEmpCmp, echo = FALSE, warning = FALSE}
-spaghetPlot("empower_composite")
+```{r all.spaghEmpCmp, echo = FALSE, warning = FALSE}
+spaghetPlot_all("empower_composite")
 ```
 
 ####Composite Empowerment by Sex
 
-```{r spaghEmpCmp_sex, echo = FALSE, warning = FALSE}
-spaghetSex("empower_composite")
+```{r all.spaghEmpCmp_sex, echo = FALSE, warning = FALSE}
+spaghetSex_all("empower_composite")
 ```
 
 
 
 ####Individual Empowerment
 
-```{r spaghEmpInd, echo = FALSE, warning = FALSE}
-spaghetPlot("empower_individual")
+```{r all.spaghEmpInd, echo = FALSE, warning = FALSE}
+spaghetPlot_all("empower_individual")
 ```
 
 ####Individual Empowerment by Sex
 
-```{r spaghEmpInd_sex, echo = FALSE, warning = FALSE}
-spaghetSex("empower_individual")
+```{r all.spaghEmpInd_sex, echo = FALSE, warning = FALSE}
+spaghetSex_all("empower_individual")
 ```
 
 
 
 ####Community Empowerment
 
-```{r spaghEmpCmn, echo = FALSE, warning = FALSE}
-spaghetPlot("empower_community")
+```{r all.spaghEmpCmn, echo = FALSE, warning = FALSE}
+spaghetPlot_all("empower_community")
 ```
 
 ####Community Empowerment by Sex
 
-```{r spaghEmpCmn_sex, echo = FALSE, warning = FALSE}
-spaghetSex("empower_community")
+```{r all.spaghEmpCmn_sex, echo = FALSE, warning = FALSE}
+spaghetSex_all("empower_community")
 ```
 
 
 
 ####Organizational Empowerment
 
-```{r spaghEmpOrg, echo = FALSE, warning = FALSE}
-spaghetPlot("empower_organization")
+```{r all.spaghEmpOrg, echo = FALSE, warning = FALSE}
+spaghetPlot_all("empower_organization")
 ```
 
 ####Organizational Empowerment by Sex
 
-```{r spaghEmpOrg_sex, echo = FALSE, warning = FALSE}
-spaghetSex("empower_organization")
+```{r all.spaghEmpOrg_sex, echo = FALSE, warning = FALSE}
+spaghetSex_all("empower_organization")
 ```
 
 
@@ -2035,37 +2056,478 @@ spaghetSex("empower_organization")
 
 ####Triceps Skinfold
 
-```{r spaghTSF, echo = FALSE, warning = FALSE}
-spaghetPlot("TSF_avg")
+```{r all.spaghTSF, echo = FALSE, warning = FALSE}
+spaghetPlot_all("TSF_avg")
 ```
 
 ####Triceps Skinfold by Sex
 
-```{r spaghTSF_sex, echo = FALSE, warning = FALSE}
-spaghetSex("TSF_avg")
+```{r all.spaghTSF_sex, echo = FALSE, warning = FALSE}
+spaghetSex_all("TSF_avg")
 ```
 
 
 
 ####Waist Circumference
 
-```{r spaghWC, echo = FALSE, warning = FALSE}
-spaghetPlot("WC_avg")
+```{r all.spaghWC, echo = FALSE, warning = FALSE}
+spaghetPlot_all("WC_avg")
 ```
 
 ####Waist Circumference by Sex
 
-```{r spaghWC_sex, echo = FALSE, warning = FALSE}
-spaghetSex("WC_avg")
+```{r all.spaghWC_sex, echo = FALSE, warning = FALSE}
+spaghetSex_all("WC_avg")
 ```
 
 
 
-##Cohort 2
+##Cohort 1 Longitudinal Interpretation{.tabset}
+
+
+```{r fun_spaghCoh1, echo = FALSE}
+spaghetPlot <- function(variable, cohort_var){
+  analytic_cohort %>% filter(cohort == cohort_var) %>% 
+    ggplot(aes_string(x = "phase", y = variable, group = "ID", color = "cohort")) +
+    geom_line() +
+    # add theme colors (set in first chunk)
+    yh_cohort_colors() +
+    # remove legend
+    theme(legend.position = "none") +
+    stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.5, color = "black", linetype = 2) +
+    ylab(label = label(analytic_cohort[[variable]])) +
+    xlab(label = "Phases (6 Months Apart)")
+}
+
+spaghetSex <- function(variable, cohort_var){
+  spaghetPlot(variable, cohort_var) +
+    facet_grid(. ~ sex) +
+    theme(
+      # rotate x-axis labels
+      axis.text.x = element_text(size = 8)
+    )
+}
+```
+
+
+###YRBS 
+
+####YRBS Diet
+
+```{r c1.spaghDiet, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot("YRBS_diet_total", "Cohort 1")
+```
+
+####YRBS Diet by Sex
+
+```{r c1.spaghDiet_sex, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetSex("YRBS_diet_total", "Cohort 1")
+```
+
+
+####YRBS Physical Activity
+
+```{r c1.spaghPhys, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot("YRBS_physical_total", "Cohort 1")
+```
+
+####YRBS Physical Activity by Sex
+
+```{r c1.spaghPhys_sex, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetSex("YRBS_physical_total", "Cohort 1")
+```
+
+
+###Self-Efficacy
+
+```{r c1.spaghGSE, echo = FALSE, warning = FALSE}
+spaghetPlot("total_efficacy", "Cohort 1")
+```
+
+####Self-Efficacy by Sex
+
+```{r c1.spaghGSE_sex, echo = FALSE, warning = FALSE}
+spaghetSex("total_efficacy", "Cohort 1")
+```
+
+
+
+###Empowerment
+
+####Composite Empowerment
+
+```{r c1.spaghEmpCmp, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_composite", "Cohort 1")
+```
+
+####Composite Empowerment by Sex
+
+```{r c1.spaghEmpCmp_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_composite", "Cohort 1")
+```
+
+
+
+####Individual Empowerment
+
+```{r c1.spaghEmpInd, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_individual", "Cohort 1")
+```
+
+####Individual Empowerment by Sex
+
+```{r c1.spaghEmpInd_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_individual", "Cohort 1")
+```
+
+
+
+####Community Empowerment
+
+```{r c1.spaghEmpCmn, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_community", "Cohort 1")
+```
+
+####Community Empowerment by Sex
+
+```{r c1.spaghEmpCmn_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_community", "Cohort 1")
+```
+
+
+
+####Organizational Empowerment
+
+```{r c1.spaghEmpOrg, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_organization", "Cohort 1")
+```
+
+####Organizational Empowerment by Sex
+
+```{r c1.spaghEmpOrg_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_organization", "Cohort 1")
+```
+
+
+
+###Anthropometric
+
+####Triceps Skinfold
+
+```{r c1.spaghTSF, echo = FALSE, warning = FALSE}
+spaghetPlot("TSF_avg", "Cohort 1")
+```
+
+####Triceps Skinfold by Sex
+
+```{r c1.spaghTSF_sex, echo = FALSE, warning = FALSE}
+spaghetSex("TSF_avg", "Cohort 1")
+```
+
+
+
+####Waist Circumference
+
+```{r c1.spaghWC, echo = FALSE, warning = FALSE}
+spaghetPlot("WC_avg", "Cohort 1")
+```
+
+####Waist Circumference by Sex
+
+```{r c1.spaghWC_sex, echo = FALSE, warning = FALSE}
+spaghetSex("WC_avg", "Cohort 1")
+```
+
+
+
+##Cohort 2 Longitudinal Interpretation{.tabset}
 
 Spaghetti plots for Cohort 2 cannot be created until data has been collecte for more than one phase.
 
+###YRBS 
 
-##Cohort 3
+####YRBS Diet
+
+```{r c2.spaghDiet, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot("YRBS_diet_total", "Cohort 2")
+```
+
+####YRBS Diet by Sex
+
+```{r c2.spaghDiet_sex, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetSex("YRBS_diet_total", "Cohort 2")
+```
+
+
+####YRBS Physical Activity
+
+```{r c2.spaghPhys, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetPlot("YRBS_physical_total", "Cohort 2")
+```
+
+####YRBS Physical Activity by Sex
+
+```{r c2.spaghPhys_sex, echo = FALSE, warning = FALSE, message = FALSE}
+spaghetSex("YRBS_physical_total", "Cohort 2")
+```
+
+
+###Self-Efficacy
+
+```{r c2.spaghGSE, echo = FALSE, warning = FALSE}
+spaghetPlot("total_efficacy", "Cohort 2")
+```
+
+####Self-Efficacy by Sex
+
+```{r c2.spaghGSE_sex, echo = FALSE, warning = FALSE}
+spaghetSex("total_efficacy", "Cohort 2")
+```
+
+
+
+###Empowerment
+
+####Composite Empowerment
+
+```{r c2.spaghEmpCmp, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_composite", "Cohort 2")
+```
+
+####Composite Empowerment by Sex
+
+```{r c2.spaghEmpCmp_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_composite", "Cohort 2")
+```
+
+
+
+####Individual Empowerment
+
+```{r c2.spaghEmpInd, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_individual", "Cohort 2")
+```
+
+####Individual Empowerment by Sex
+
+```{r c2.spaghEmpInd_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_individual", "Cohort 2")
+```
+
+
+
+####Community Empowerment
+
+```{r c2.spaghEmpCmn, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_community", "Cohort 2")
+```
+
+####Community Empowerment by Sex
+
+```{r c2.spaghEmpCmn_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_community", "Cohort 2")
+```
+
+
+
+####Organizational Empowerment
+
+```{r c2.spaghEmpOrg, echo = FALSE, warning = FALSE}
+spaghetPlot("empower_organization", "Cohort 2")
+```
+
+####Organizational Empowerment by Sex
+
+```{r c2.spaghEmpOrg_sex, echo = FALSE, warning = FALSE}
+spaghetSex("empower_organization", "Cohort 2")
+```
+
+
+
+###Anthropometric
+
+####Triceps Skinfold
+
+```{r c2.spaghTSF, echo = FALSE, warning = FALSE}
+spaghetPlot("TSF_avg", "Cohort 2")
+```
+
+####Triceps Skinfold by Sex
+
+```{r c2.spaghTSF_sex, echo = FALSE, warning = FALSE}
+spaghetSex("TSF_avg", "Cohort 2")
+```
+
+
+
+####Waist Circumference
+
+```{r c2.spaghWC, echo = FALSE, warning = FALSE}
+spaghetPlot("WC_avg", "Cohort 2")
+```
+
+####Waist Circumference by Sex
+
+```{r c2.spaghWC_sex, echo = FALSE, warning = FALSE}
+spaghetSex("WC_avg", "Cohort 2")
+```
+
+
+##Cohort 3 Longitudinal Interpretation{.tabset}
 
 Spaghetti plots for Cohort 3 cannot be created until data has been collecte for more than one phase.
+
+###YRBS 
+
+####YRBS Diet
+
+```{r c3.spaghDiet, echo = FALSE, warning = FALSE, message = FALSE}
+# spaghetPlot("YRBS_diet_total", "Cohort 3")
+```
+
+####YRBS Diet by Sex
+
+```{r c3.spaghDiet_sex, echo = FALSE, warning = FALSE, message = FALSE}
+# spaghetSex("YRBS_diet_total", "Cohort 3")
+```
+
+
+####YRBS Physical Activity
+
+```{r c3.spaghPhys, echo = FALSE, warning = FALSE, message = FALSE}
+# spaghetPlot("YRBS_physical_total", "Cohort 3")
+```
+
+####YRBS Physical Activity by Sex
+
+```{r c3.spaghPhys_sex, echo = FALSE, warning = FALSE, message = FALSE}
+# spaghetSex("YRBS_physical_total", "Cohort 3")
+```
+
+
+###Self-Efficacy
+
+```{r c3.spaghGSE, echo = FALSE, warning = FALSE}
+# spaghetPlot("total_efficacy", "Cohort 3")
+```
+
+####Self-Efficacy by Sex
+
+```{r c3.spaghGSE_sex, echo = FALSE, warning = FALSE}
+# spaghetSex("total_efficacy", "Cohort 3")
+```
+
+
+
+###Empowerment
+
+####Composite Empowerment
+
+```{r c3.spaghEmpCmp, echo = FALSE, warning = FALSE}
+# spaghetPlot("empower_composite", "Cohort 3")
+```
+
+####Composite Empowerment by Sex
+
+```{r c3.spaghEmpCmp_sex, echo = FALSE, warning = FALSE}
+# spaghetSex("empower_composite", "Cohort 3")
+```
+
+
+
+####Individual Empowerment
+
+```{r c3.spaghEmpInd, echo = FALSE, warning = FALSE}
+# spaghetPlot("empower_individual", "Cohort 3")
+```
+
+####Individual Empowerment by Sex
+
+```{r c3.spaghEmpInd_sex, echo = FALSE, warning = FALSE}
+# spaghetSex("empower_individual", "Cohort 3")
+```
+
+
+
+####Community Empowerment
+
+```{r c3.spaghEmpCmn, echo = FALSE, warning = FALSE}
+# spaghetPlot("empower_community", "Cohort 3")
+```
+
+####Community Empowerment by Sex
+
+```{r c3.spaghEmpCmn_sex, echo = FALSE, warning = FALSE}
+# spaghetSex("empower_community", "Cohort 3")
+```
+
+
+
+####Organizational Empowerment
+
+```{r c3.spaghEmpOrg, echo = FALSE, warning = FALSE}
+# spaghetPlot("empower_organization", "Cohort 3")
+```
+
+####Organizational Empowerment by Sex
+
+```{r c3.spaghEmpOrg_sex, echo = FALSE, warning = FALSE}
+# spaghetSex("empower_organization", "Cohort 3")
+```
+
+
+
+###Anthropometric
+
+####Triceps Skinfold
+
+```{r c3.spaghTSF, echo = FALSE, warning = FALSE}
+# spaghetPlot("TSF_avg", "Cohort 3")
+```
+
+####Triceps Skinfold by Sex
+
+```{r c3.spaghTSF_sex, echo = FALSE, warning = FALSE}
+# spaghetSex("TSF_avg", "Cohort 3")
+```
+
+
+####Waist Circumference
+
+```{r c3.spaghWC, echo = FALSE, warning = FALSE}
+# spaghetPlot("WC_avg", "Cohort 3")
+```
+
+####Waist Circumference by Sex
+
+```{r c3.spaghWC_sex, echo = FALSE, warning = FALSE}
+# spaghetSex("WC_avg", "Cohort 3")
+```
+
+
+#Eliminate missing data
+
+This is a preliminary analysis done for data collection through summer 2019, which corresponded to Phase 3.1 for Cohort 1, and Phase 2.1 for Cohort 2. Exclusion criteria will be different in the final analysis. For now, individuals will be included with complete data up to Phase 2.1 for Cohort 1, and with complete data up to Phase 2.1 for Cohort 2.  
+
+The final dataset should include all participants who completed 3 measurements, i.e. up to Phase 2.1; this is because longitudinal data is defined as 3 or more measurements on the same individual (unit).
+
+By this logic, the paper should be ready to be published January 2021, once 3 measurements are available for Cohort 3.
+
+```{r exclude_preliminary, include=F}
+
+
+# analytic_cohort %>% 
+#   # exclude all missing data
+#   # filter(!is.na(cohort)) %>% 
+#   group_by(ID) %>% 
+#   if(cohort = "Cohort 1" & phase){
+#     
+#   }
+
+
+```
+
+
+
+#Longitudinal Data Analysis
+

@@ -1,14 +1,15 @@
 ---
 title: "YouHeaL Analysis"
 author: "Dom Grisafe"
-date: "6/10/2019"
+date: "`r Sys.Date()`"
 output:
   html_document:
     df_print: paged
+    self-contained: yes
+    standalone: yes
     toc: yes
     toc_float: yes
-    standalone: true
-    self-contained: true
+always_allow_html: yes
 ---
 
 ```{r, include = FALSE}
@@ -38,11 +39,16 @@ library(dplyr)
 library(readr)
 library(stringr)
 library(cowplot)
+theme_set(theme_cowplot())
 library(tableone)      # table 1
 library(kableExtra)    # HTML tables
 
 #need to label variables
 library(Hmisc)
+
+# libraries for longitudinal data analysis, from the datacamp package
+library(lme4)
+library(nlme)
 ```
 
 
@@ -73,6 +79,33 @@ yh_cohort#_datatype_phase#, where:
 
 "phase#" is phase1, phase2.1, phase2.2, phase3.1, or phase 3.2
 
+##Data Paths
+
+This chunk loads data for all the subsequent data collections. This data was collected using the google form.  
+
+Note, for cohort 1, phase 1 and phase 2.1 were manually input into excel. A previous program formatted this data and saved it as an R dataset.  
+
+Starting with cohort 1, phase 2.2, as well as for all subsequent cohorts, data was entered using a google form, allowing a uniform formatting using functions in this program. All data imports starting with cohort 1, phase 2.2 should have the same process for loading data.
+
+```{r data_paths, echo = FALSE}
+
+# cohort 1
+data.path.c1 <- "/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 1"
+# cohort 1: phase 1, phase 2.1, phase 2.2
+data.path.c1.p1p2 <- "/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets"
+# cohort 1, phase 2.2
+data.path.c1.p2.2 <- "/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 1/Phase 2.2"
+# cohort 1, phase 3.1
+data.path.c1.p3.1 <- "/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 1/Phase 3.1"
+
+# cohort 2
+data.path.c2 <- "/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 2"
+data.path.c2.p1 <- "/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 2/Phase 1"
+# cohort 2, phase 2.1
+data.path.c2.p2.1 <- "/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 2/Phase 2.1"
+
+#cohort 3
+```
 
 ##Load Data from Cohorts and Phases
 
@@ -81,7 +114,7 @@ This chunk loads data for Cohort 1 for Phases 1 and 2.1. This data was from the 
 ```{r loadP1P2.1Data, echo = FALSE}
 
 #set directory to "Data" folder where .CSV files are located
-setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
+setwd(data.path.c1.p1p2)
 
 #import phase 1 and phase 2.1 data
 load(file = "Phase1_Scored.RData")
@@ -188,6 +221,9 @@ clean_c1p1 <- function(){
 
 # call function, save dataset for cohort 1, phase 1
 yh_cohort1_phase1 <- clean_c1p1()
+
+# make a character string of all the ID's in the baseline cohort
+id_cohort1 <- yh_cohort1_phase1$ID
 ```
 
 
@@ -296,7 +332,7 @@ load_GF_sociodem_phase1 <- function(dataset){
   dataset %>%
     select(
       ID = "Survey ID",
-      DOC = "Date of Completion",
+      DOC = "Timestamp",
       DOB = "Date of Birth",
       sex = "1. What is your gender?",
       age = "2. What is your age?",
@@ -307,7 +343,7 @@ load_GF_sociodem_phase1 <- function(dataset){
       city = starts_with("6a. In what city"),
       zip = starts_with("6b. In what Zip")
     ) %>%
-    # rename ID and anthro variables as numeric
+    # rename ID variable as numeric
     mutate(ID = as.double(ID))
 }
 
@@ -316,12 +352,13 @@ load_GF_sociodem_repeat <- function(dataset){
   dataset %>%
     select(
       ID = "Survey ID",
-      DOC = "Date of Completion",
+      DOC = "Timestamp",
       DOB = "Date of Birth"
     ) %>%
-    # rename ID and anthro variables as numeric
+    # rename ID variable as numeric
     mutate(ID = as.double(ID))
-  }
+}
+
 
 # load and rename anthropometric variables
 load_GF_anthro <- function(dataset){
@@ -430,7 +467,61 @@ load_GF_empower <- function(dataset){
     ) %>%
     # rename ID and anthro variables as numeric
     mutate(ID = as.double(ID))
-  }
+}
+
+# generic function that cleans the dataset from google form
+clean_googleform_data <- function(label_cohort, label_phase, dir_path, file_anthro, sheet_anthro, file_survey, sheet_survey = "Form Responses 1"){
+
+  #set directory to "Data" folder where excel file is located
+  setwd(dir_path)
+
+  # load data files
+  data.anthro <- read_excel(file_anthro, sheet = sheet_anthro, col_names = TRUE, skip = 1)
+  data.survey <- read_excel(file_survey, sheet = sheet_survey, col_names = TRUE)
+  
+  #subset sociodemographic data and rename sociodem variables
+  if(grepl(label_phase, "Phase 1")){
+    # if were looking at phase 1 data, then include baseline sociodemographics
+    data_subset_sociodem <- load_GF_sociodem_phase1(data.survey)
+    }else{
+    # if were looking at any data besides phase 1, then only include brief sociodemographics
+      data_subset_sociodem <-  load_GF_sociodem_repeat(data.survey)
+    }
+  
+  # load anthropometric data and rename anthropometric variables
+  data_subset_anthro <- data.anthro %>% load_GF_anthro()
+
+  # load YRBS data and rename YRBS survey variables
+  data_subset_YRBS <- data.survey %>% load_GF_YRBS()
+
+  # load efficacy data
+  data_subset_efficacy <- data.survey %>% load_GF_efficacy()
+
+  # load empowerment data
+  data_subset_empower <- data.survey %>% load_GF_empower()
+
+  # join data into single dataset
+  data_subset_sociodem %>%
+    full_join(y = data_subset_anthro, by = "ID") %>%
+    full_join(y = data_subset_YRBS, by = "ID") %>% 
+    full_join(y = data_subset_efficacy, by = "ID") %>%
+    full_join(y = data_subset_empower, by = "ID") %>%
+    
+    # add cohort and phase variables
+    mutate(cohort = label_cohort, phase = label_phase) %>%
+    
+    # order variables so cohort and phase are first
+    select(cohort, phase, everything())
+}
+
+
+# function to run on follow-up phases (anything other than Phase 1)
+compare_baseline <- function(data_phase_later, data_phase1_demographics){
+  # join clean function above to sociodemographics from Phase 1
+  right_join(x = data_phase_later, y = data_phase1_demographics, by = "ID") %>% 
+  # check to make sure all IDs in later phases match those at baseline
+  filter(.$ID %in% data_phase1_demographics$ID)
+}
 ```
 
 
@@ -439,54 +530,38 @@ load_GF_empower <- function(dataset){
 Import data from Cohort 1, Phase 2.2. This data was collected using the Google Form.
 
 ```{r clean_c1p2.2, echo = FALSE, warning = FALSE}
+# save dataset for Cohort 1, Phase 2.2
+yh_cohort1_phase2.2 <- clean_googleform_data(
+    dir_path = data.path.c1.p2.2, 
+    file_anthro = "20190305_Cohort1_AnthropometricData.xlsx",
+    sheet_anthro = "Post PHM; 01192019",
+    file_survey = "Cohort 1 Phase 2.2 - January 2019.xlsx",
+    sheet_survey = "Form Responses 1",
+    label_cohort = "Cohort 1",
+    label_phase = "Phase 2.2"
+    ) %>% 
+  # join Phase 1 (baseline) demographics, and exclude participants not in Phase 1
+  compare_baseline(data_phase1_demographics = yh_cohort1_sociodem_phase1)
+```
 
-#set directory to "Data" folder where excel file for Cohort 1 is located
-setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 1")
+####C1, Phase 3.1
 
-clean_c1p2.2 <- function(){
-  
-  #subset sociodemographic data
-  yh_cohort1_sociodem_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>%
-    # rename sociodem variables
-    load_GF_sociodem_repeat() %>% 
-    # add cohort and phase variables
-    mutate(
-      cohort = "Cohort 1",
-      phase = "Phase 2.2"
-    )
-  
-  # load anthropometric data from Phase 2.2
-  yh_cohort1_anthro_phase2.2 <- read_excel("20190305_Cohort1_AnthropometricData.xlsx", sheet = "Post PHM; 01192019", col_names = TRUE, skip = 1) %>%
-    # rename anthropometric variables
-    load_GF_anthro()
-    
-  # load YRBS data from Phase 2.2
-  yh_cohort1_YRBS_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>% 
-    # rename YRBS survey variables
-    load_GF_YRBS()
-  
-  # load efficacy data from Phase 2.2
-  yh_cohort1_efficacy_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>%
-    load_GF_efficacy()
-  
-  # load empowerment data from Phase 2.2
-  yh_cohort1_empower_phase2.2 <- read_excel("Cohort 1 Phase 2.2 - January 2019.xlsx", col_names = TRUE) %>%
-    load_GF_empower()
+Import data from Cohort 1, Phase 3.1. This data was collected using the Google Form.
 
-  # join phase 2.2 data into single dataset
-  yh_cohort1_sociodem_phase2.2 %>% 
-  full_join(y = yh_cohort1_anthro_phase2.2, by = "ID") %>% 
-  full_join(y = yh_cohort1_YRBS_phase2.2, by = "ID") %>% 
-  full_join(y = yh_cohort1_efficacy_phase2.2, by = "ID") %>% 
-  full_join(y = yh_cohort1_empower_phase2.2, by = "ID")
-}
+```{r clean_c1p3.1, echo = FALSE, warning = FALSE, message = FALSE}
 
-# call function, save dataset for cohort 1, phase 2.2
-yh_cohort1_phase2.2 <- 
-  # add sociodemographics from Phase 1
-  yh_cohort1_sociodem_phase1 %>% 
-  # join to clean function above
-  right_join(y = clean_c1p2.2(), by = "ID")
+# save dataset for Cohort 1, Phase 3.1
+yh_cohort1_phase3.1 <- clean_googleform_data(
+    dir_path = data.path.c1.p3.1, 
+    file_anthro = "20190810_Cohort1_AnthropometricData.xlsx",
+    sheet_anthro = "Post their CHP training; 081020",
+    file_survey = "YouHeaL Summer 2019 (Responses).xlsx",
+    sheet_survey = "Form Responses 1",
+    label_cohort = "Cohort 1",
+    label_phase = "Phase 3.1"
+    ) %>% 
+  # join Phase 1 (baseline) demographics, and exclude participants not in Phase 1
+  compare_baseline(data_phase1_demographics = yh_cohort1_sociodem_phase1)
 ```
 
 
@@ -498,50 +573,39 @@ yh_cohort1_phase2.2 <-
 Import data from Cohort 2, Phase 1. This data was collected using the Google Form.
 
 ```{r clean_c2p1, echo = FALSE}
+# save dataset for Cohort 2, Phase 1
+yh_cohort2_phase1 <- clean_googleform_data(
+    dir_path = data.path.c2.p1, 
+    file_anthro = "20190305_Cohort2_AnthropometricData.xlsx",
+    sheet_anthro = "Initial DDMM2019",
+    file_survey = "20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx",
+    sheet_survey = "Form Responses 1",
+    label_cohort = "Cohort 2",
+    label_phase = "Phase 1"
+    ) 
 
- #set directory to "Data" folder where excel file for Cohort 2 is located
-setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/Cohort 2")
+#subset sociodemographic data, cohort 2
+yh_cohort2_sociodem_phase1 <- yh_cohort2_phase1 %>% select(ID, sex, age, language1, language2, english_prof, race, city, zip)
+```
 
-clean_c2p1 <- function(){
-  
-  #subset sociodemographic data
-  yh_cohort2_sociodem_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
-    # rename sociodem variables
-    load_GF_sociodem_phase1() %>% 
-    # add cohort and phase variables
-    mutate(
-      cohort = "Cohort 2",
-      phase = "Phase 1"
-    )
-  
-  # load anthropometric data
-  yh_cohort2_anthro_phase1 <- read_excel("20190305_Cohort2_AnthropometricData.xlsx", sheet = "Initial DDMM2019", col_names = TRUE, skip = 1) %>%
-    # rename anthropometric variables
-    load_GF_anthro()
-    
-  # load YRBS data
-  yh_cohort2_YRBS_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
-    # rename YRBS survey variables
-    load_GF_YRBS()
-  
-  # load efficacy data
-  yh_cohort2_efficacy_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
-    load_GF_efficacy()
-  
-  # load empowerment data
-  yh_cohort2_empower_phase1 <- read_excel("20190528 YouHeaL Participant Questionnaire - Cohort 2 Phase 1.xlsx", col_names = TRUE) %>% 
-    load_GF_empower()
+####C2, Phase 2.1
 
-  # join data into single dataset
-  yh_cohort2_sociodem_phase1 %>% 
-  full_join(y = yh_cohort2_anthro_phase1, by = "ID") %>% 
-  full_join(y = yh_cohort2_YRBS_phase1, by = "ID") %>% 
-  full_join(y = yh_cohort2_efficacy_phase1, by = "ID") %>% 
-  full_join(y = yh_cohort2_empower_phase1, by = "ID")
-}
+Import data from Cohort 2, Phase 2. This data was collected using the Google Form in July.
 
-# call function, save dataset
-yh_cohort2_phase1 <- clean_c2p1()
+```{r clean_c2p2.1, echo = FALSE, message = FALSE}
+
+# save dataset for Cohort 2, Phase 2.1
+yh_cohort2_phase2.1 <- clean_googleform_data(
+    dir_path = data.path.c2.p2.1, 
+    file_anthro = "20190810 Cohort 2 Anthropometric Data.xlsx",
+    sheet_anthro = "Post 08102019",
+    file_survey = "YouHeaL Summer 2019 (Responses).xlsx",
+    sheet_survey = "Form Responses 1",
+    label_cohort = "Cohort 2",
+    label_phase = "Phase 2.1"
+    ) %>% 
+  # join Phase 1 (baseline) demographics, and exclude participants not in Phase 1
+  compare_baseline(data_phase1_demographics = yh_cohort2_sociodem_phase1)
 ```
 
 
@@ -553,7 +617,7 @@ This section formats categorical variables (i.e. factors) so they can be plotted
 
 This list contains all possible responses for all items in the YouHeaL survey. These are based off the [Google Form](https://docs.google.com/forms/d/e/1FAIpQLScYYCT2T8FhgbfYV5c6LHLVtrtcxSaBXMpgN363Atb-9C3Vdw/viewform) that is available for future phases of the study. This way all responses can be scored automatically, without having to recode factor levels each time. A later chunk will make a function to format the Google Form item response factors.  
 
-This list also contains old levels, from the manually entered data for Phases 1 and 2.1. This is used in the following chunk to reformat old responses to the updated format. 
+This list also contains old levels, from the manually entered data for Phases 1 and 2.1. This is used in the following chunk to reformat old responses to the updated format.  
 
 ```{r itemFactorList, echo = FALSE}
 # make list of vectors of the properly (and old) formatted YRBS response levels
@@ -1050,6 +1114,17 @@ format_empower_factors <- function(dataset){
 
 
 # this function calls all the functions for the Google Form responses, in a row (i.e. it uses the "format_YRBS_factors" function instead of the "format_YRBS_old_factors" function)
+format_GoogleForms_old <- function(dataset){
+  dataset %>%
+    format_cohortphase_factors() %>%
+    # had to use manually entered sociodem formatting because copied variables from Phase 1
+    format_sociodem_old_factors() %>% 
+    format_YRBS_factors() %>% 
+    format_efficacy_factors() %>% 
+    format_empower_factors()
+}
+
+# this function calls all the functions for the Google Form responses, in a row (i.e. it uses the "format_YRBS_factors" function instead of the "format_YRBS_old_factors" function)
 format_GoogleForms <- function(dataset){
   dataset %>%
     format_cohortphase_factors() %>% 
@@ -1068,17 +1143,10 @@ This chunk re-formats all the old factor levels from Phases 1 and 2.1 so they ma
 ```{r formatP1P2.1, echo = FALSE}
 
 yh_cohort1_p1_p2.1_labeled <- 
-  
   # bind rows of phase 1 and phase 2.1 datasets
-  #   The phases were entered manually, and both need to be formatted to the updated google form
   yh_cohort1_phase1 %>% rbind(yh_cohort1_phase2.1) %>% 
-  
-  # format factors in dataset so they match the Google Form responses
-  format_cohortphase_factors() %>% 
-  format_sociodem_old_factors() %>% 
-  format_YRBS_old_factors() %>% 
-  format_efficacy_factors() %>% 
-  format_empower_factors()
+  #   The phases were entered manually, both formating to updated google form
+  format_GoogleForms_old()
 ```
 
 
@@ -1089,17 +1157,28 @@ This chunk applies the formatting and labeling functions to the Cohort 1, Phase 
 ```{r formatGoogleForm_apply, echo = FALSE}
 # format the YouHeaL surveys so factors match
 
-# Cohort 1, Phase 2.2
-yh_cohort1_phase2.2_labeled <- yh_cohort1_phase2.2 %>%
-  format_cohortphase_factors() %>%
-  # had to use manually entered sociodem formatting because copied variables from Phase 1
-  format_sociodem_old_factors() %>% 
-  format_YRBS_factors() %>% 
-  format_efficacy_factors() %>% 
-  format_empower_factors()
 
-# Cohort 2, Phase 1
-yh_cohort2_phase1_labeled <- yh_cohort2_phase1 %>% format_GoogleForms()
+# Cohort 1
+
+    # Cohort 1, Phase 2.2
+    yh_cohort1_phase2.2_labeled <- yh_cohort1_phase2.2 %>%
+    # had to use manually entered sociodem formatting because copied variables from Phase 1
+    format_GoogleForms_old()
+
+    # Cohort 1, Phase 3.1
+    yh_cohort1_phase3.1_labeled <- yh_cohort1_phase3.1 %>%
+    # had to use manually entered sociodem formatting because copied variables from Phase 1
+    format_GoogleForms_old()
+
+    
+# Cohort 2
+
+  # Cohort 2, Phase 1
+  yh_cohort2_phase1_labeled <- yh_cohort2_phase1 %>% format_GoogleForms()
+  
+  # Cohort 2, Phase 2.1
+  yh_cohort2_phase2.1_labeled <- yh_cohort2_phase2.1 %>% format_GoogleForms()
+
 ```
 
 
@@ -1108,9 +1187,16 @@ yh_cohort2_phase1_labeled <- yh_cohort2_phase1 %>% format_GoogleForms()
 This chunk combines all the different Cohorts and Phases into a single dataset
 
 ```{r mergeAll, echo = FALSE, warning = FALSE}
-analytic_cohort_raw <- yh_cohort1_p1_p2.1_labeled %>% 
+analytic_cohort_raw <- 
+  
+  # cohort 1
+  yh_cohort1_p1_p2.1_labeled %>% 
   bind_rows(yh_cohort1_phase2.2_labeled) %>% 
-  bind_rows(yh_cohort2_phase1_labeled)
+  bind_rows(yh_cohort1_phase3.1_labeled) %>% 
+  
+  # cohort 2
+  bind_rows(yh_cohort2_phase1_labeled) %>% 
+  bind_rows(yh_cohort2_phase2.1_labeled)
 ```
 
 
@@ -1239,7 +1325,7 @@ analytic_cohort$YRBS_diet_total <- analytic_cohort %>% select(
   ) %>% 
   
   # sum the rows to get the overall YRBS diet composite
-  apply(MARGIN = 1, FUN = sum)
+  apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
 
 print("Summary stats for YRBS Diet score")
 analytic_cohort$YRBS_diet_total %>% summary
@@ -1286,7 +1372,7 @@ analytic_cohort$YRBS_physical_total <- analytic_cohort %>%
   ) %>% 
   
   # sum the rows to get the overall YRBS diet composite
-  apply(MARGIN = 1, FUN = sum)
+  apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
 
 print("Summary stats for YRBS Physical Activity score")
 analytic_cohort$YRBS_physical_total %>% summary
@@ -1329,7 +1415,7 @@ analytic_cohort$total_efficacy <- analytic_cohort %>%
   # add points to each response for GSE items
   apply(MARGIN = 2, FUN = scoreGSE) %>%
   # sum the points for each individual during each Phase to get a total score
-  apply(MARGIN = 1, FUN = sum)
+  apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
 
 
 print("Summary stats for Total Self-Efficacy score")
@@ -1382,7 +1468,7 @@ scoreEmp <- function(item_string){
     # add points to each response for EmpCmp items
     apply(MARGIN = 2, FUN = weightEmp) %>%
     # sum the points for each individual during each Phase to get a total score
-    apply(MARGIN = 1, FUN = sum)
+    apply(MARGIN = 1, FUN = sum, na.rm = TRUE)
 }
 
 # creates Composite Empowerment variable (range from 12 to 48, all empowerment items - Q36 to Q47) 
@@ -1559,7 +1645,7 @@ This chunk saves the dataset as a permanent R datafile. This can be used for fur
 
 ```{r saveData, echo = FALSE}
 #set save location
-setwd("/Volumes/GoogleDrive/My Drive/20180823 YouHeal/Data/!Clean Datasets")
+setwd(data.path.c1.p1p2)
 
 # Save phase 1 data file
 # save(analytic_cohort, file = "YouHeaL_analytic_cohort.RData")

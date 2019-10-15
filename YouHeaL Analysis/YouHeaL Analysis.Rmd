@@ -8,28 +8,14 @@ output:
     self-contained: yes
     standalone: yes
     toc: yes
-    toc_depth: 2
+    toc_depth: 1
     toc_float: yes
 always_allow_html: yes
 ---
 
 ```{r, include = FALSE}
-# Include the following in the YAML header to make an html file:
-# output:
-#   html_document:
-#     df_print: paged
-#     toc: yes
-#     toc_float: yes
-#     standalone: true
-#     self-contained: true
+knitr::opts_chunk$set(echo = FALSE)
 
-# Include the following in the YAML header to make an landscape PDF file:
-# output: pdf_document
-# classoption: landscape
-```
-
-
-```{r, include = FALSE}
 #Initialize libraries to be used
 library(tidyverse)
   #tidyverse causes LaTeX error when outputting to PDF...change to "xelatex" from PDF options. Or use      HTML
@@ -51,6 +37,14 @@ library(Hmisc)
 library(lme4)
 library(nlme)
 
+# functions to make timeline
+library(timelineS)    # timelineS
+library(vistime)      # this makes a timeline
+library(plotly)       # for exporting timeline to .png
+library(lubridate)    # allows adding months to dates
+library(scales)
+library(wesanderson)
+
 # function that sets manual colors on plots
 yh_cohort_colors <- function(){
   # color patterns for cohorts
@@ -63,15 +57,212 @@ yh_cohort_colors <- function(){
 ```
 
 
-#Timeline
-
-![](YouHeaL_timeline_edited.png)
+#Timeline{.tabset}
 
 The image shows the expected timeline of the [YouHeaL study](https://www.youhealprogram.com/). The study is designed to have 3 cohorts that each begin one year apart.  
 
 During the first 6 months the first cohort is trained as Community Health Promoters (CHP) and completes a service project. The second 6 months, they are trained as Peer Health Mentors (PHM), where they learn to train their classmates to be CHPs. During the third 6 month period, Cohort 1 become PHMs that train Cohort 2 to be CHPs. At this point Cohort 2 begins doing everything Cohort 1 started, but 1 year behind them. During the fourth 6 month period, Cohort 1 is trained as Peer Health Leaders (PHL), where they learn to train the CHPs to become PHMs for Cohort 3, and then PHLs from Cohort 1 actually train Cohort 2 to be PHMs. Finally, during the fifth 6 month period, the PHLs from Cohort 1 work with the PHMs from Cohort 2 to train Cohort 3 to be CHPs.  
 
 Each cohort is larger than the last, propagating healthy lifestyle habits to increasingly larger groups of high school students through their social networks.
+
+##Timeline, timelineS
+
+Try creating a timeline using the [timelineS package](https://github.com/daheelee/timelineS).
+
+```{r timeline_timelineS, echo = FALSE, include = FALSE, message = FALSE}
+# function that creates timeline data
+get_data_timelineS <- function(){
+  
+  # start dates for different phases of cohort 1
+  phase1_start <- as.Date("2018-1-1")
+  phase2.1_start <- phase1_start %m+% months(6)
+  phase2.2_start <- phase1_start %m+% months(12)
+  phase3.1_start <- phase2.1_start %m+% months(12)
+  phase3.2_start <- phase2.2_start %m+% months(12)
+  
+  # create cohort 1 information
+  cohort1 <- c(phase1_start, phase2.1_start, phase2.2_start, phase3.1_start, phase3.2_start) %>% 
+    as.data.frame() %>% 
+    cbind(phase = c("1", "2.1", "2.2", "3.1", "3.2")) %>% 
+    dplyr::rename(.data = ., start = .) %>% 
+    mutate(
+      end = start %m+% months(6),
+      cohort = 1
+    ) %>% select(cohort, phase, everything())
+  
+  # create cohort 2 information, all dates start 1 year after cohort 1
+  cohort2 <- cohort1 %>% 
+    mutate(
+      start = start %m+% months(12),
+      end = end %m+% months(12),
+      cohort = 2
+    )
+  
+  # create cohort 3 information, all dates start 2 years after cohort 1
+  cohort3 <- cohort1 %>% 
+    mutate(
+      start = start %m+% months(24),
+      end = end %m+% months(24),
+      cohort = 3
+    )
+  
+  # combine information into a single dataset
+  rbind(cohort1, cohort2, cohort3) %>% 
+    # format factor levels for phases
+    mutate(
+      cohort = factor(cohort, levels = rev(c(1, 2, 3)), labels = rev(c("Cohort 1", "Cohort 2", "Cohort 3"))),
+      phase = factor(phase,
+                     levels = c("1", "2.1", "2.2", "3.1", "3.2"),
+                     labels = c("Health Training", "Mentor Training", "Mentoring", "Coach Training", "Coaching")
+                     )
+      )
+}
+
+# save timeline data
+data_timelineS <- get_data_timelineS() 
+  
+# make timeline
+plot_timelineS <- function(data){
+  
+  ggtimeline <- data %>% timelineG(start = "start", end = "end", names = "cohort", phase = "phase") +
+    theme(
+      legend.position = "top",
+      legend.text = element_text(size = 10),
+      legend.title = element_blank()
+    ) +
+    scale_x_date(date_breaks = "1 year", 
+                   labels = date_format("%Y"),
+                   limits = as.Date(c('2018-01-01','2023-01-01'))) +
+    ylim(c("Cohort 3", "Cohort 2", "Cohort 1")) +
+    ylab("") +
+    xlab("\nYear") +
+    scale_color_manual(values = rev(wes_palette(n = 5, name = "Zissou1")))
+  
+}
+
+# save copy of timeline overall
+ggtimeline_all <- data_timelineS %>% plot_timelineS()
+dev.copy(png, "YouHeaL_ggtimeline_all.png", width = 2400, height = 1400, res = 300)
+ggtimeline_all
+dev.off()
+
+# save step by step timelines for presentation
+
+##timeline1
+ggtimeline1 <- data_timelineS %>% dplyr::filter(start < as.Date("2018-06-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline1.png", width = 2400, height = 1400, res = 300)
+ggtimeline1
+dev.off()
+
+##timeline2
+ggtimeline2 <- data_timelineS %>% dplyr::filter(start < as.Date("2019-01-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline2.png", width = 2400, height = 1400, res = 300)
+ggtimeline2
+dev.off()
+
+##timeline3
+ggtimeline3 <- data_timelineS %>% dplyr::filter(start < as.Date("2019-06-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline3.png", width = 2400, height = 1400, res = 300)
+ggtimeline3
+dev.off()
+
+##timeline4
+ggtimeline4 <- data_timelineS %>% dplyr::filter(start < as.Date("2020-01-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline4.png", width = 2400, height = 1400, res = 300)
+ggtimeline4
+dev.off()
+
+##timeline5
+ggtimeline5 <- data_timelineS %>% dplyr::filter(start < as.Date("2020-06-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline5.png", width = 2400, height = 1400, res = 300)
+ggtimeline5
+dev.off()
+
+##timeline6
+ggtimeline6 <- data_timelineS %>% dplyr::filter(start < as.Date("2021-01-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline6.png", width = 2400, height = 1400, res = 300)
+ggtimeline6
+dev.off()
+
+##timeline7
+ggtimeline7 <- data_timelineS %>% dplyr::filter(start < as.Date("2021-06-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline7.png", width = 2400, height = 1400, res = 300)
+ggtimeline7
+dev.off()
+
+##timeline8
+ggtimeline8 <- data_timelineS %>% dplyr::filter(start < as.Date("2022-01-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline8.png", width = 2400, height = 1400, res = 300)
+ggtimeline8
+dev.off()
+
+##timeline9
+ggtimeline9 <- data_timelineS %>% dplyr::filter(start < as.Date("2022-06-01")) %>% plot_timelineS()
+dev.copy(png, "Timeline/YouHeaL_ggtimeline9.png", width = 2400, height = 1400, res = 300)
+ggtimeline9
+dev.off()
+```
+![](YouHeaL_ggtimeline_all.png)
+
+##Timeline, vistime
+```{r timeline_vistime, echo = FALSE, include = FALSE, message = FALSE}
+
+# start dates for different phases of cohort 1
+phase1_start <- as.Date("2018-1-1")
+phase2.1_start <- phase1_start %m+% months(6)
+phase2.2_start <- phase1_start %m+% years(1)
+phase3.1_start <- phase2.1_start %m+% years(1)
+phase3.2_start <- phase2.2_start %m+% years(1)
+
+# cohort 1 start dates
+cohort1_start <- c(phase1_start, phase2.1_start, phase2.2_start, phase3.1_start, phase3.2_start)
+
+# cohort 1 end dates, 6 months after start
+cohort1_end <- cohort1_start %m+% months(6)
+
+
+# cohort 2 start dates, same time as cohort 1 end dates
+cohort2_start <- cohort1_start %m+% years(1)
+
+# cohort 2 end dates, 6 months after start
+cohort2_end <- cohort2_start %m+% months(6)
+
+
+# cohort 3 start dates, same time as cohort 2 end dates
+cohort3_start <- cohort2_start %m+% years(1)
+
+# cohort 3 end dates, 6 months after start
+cohort3_end <- cohort3_start %m+% months(6)
+
+
+# list for timeline
+YouHeaL_time <- data.frame(
+    
+  id      = c("Cohort 1", "Cohort 1", "Cohort 1", "Cohort 1", "Cohort 1", 
+              "Cohort 2", "Cohort 2", "Cohort 2", "Cohort 2", "Cohort 2", 
+              "Cohort 3", "Cohort 3", "Cohort 3", "Cohort 3", "Cohort 3"),
+  
+  content = c(
+    "Phase 1\nCHP Training &\nService Project", "Phase 2.1\nPHM Training\n& CHP Recruit", "Phase 2.2\nPHMs Train\nCHPs", "Phase 3.1\nPHL Training &\nPHLs Train PHMs", "Phase 3.2\nPHL & PHMs\nTrain CHPs",
+    "Phase 1", "Phase 2.1", "Phase 2.2", "Phase 3.1", "Phase 3.2",
+    "Phase 1", "Phase 2.1", "Phase 2.2", "Phase 3.1", "Phase 3.2"
+    ),
+  
+  # Example format: 2016-02-14 15:00:00
+  start = c(cohort1_start, cohort2_start, cohort3_start),
+  
+  end   = c(cohort1_end, cohort2_end, cohort3_end),
+  
+  color = rep(c("#cbb69d", "#603913", "#c69c6e", "#c69c6e", "#c69c6e"), 3)
+  
+)
+
+timeline <- vistime(data = YouHeaL_time, events = "content", groups = "id", start = "start", end = "end", background_lines = 9, colors = "color")
+
+# save the image locally 
+orca(p = timeline, file = "YouHeaL_timeline.png", format = 'png', width = 1200, height = 500, scale = 4)
+```
+![](YouHeaL_timeline_edited.png)
 
 
 #Data Management{.tabset}
@@ -1286,7 +1477,7 @@ This scoring method assumes the following items are "healthy", and the more ofte
 
 * Q8 Fruit  
 * Q9 Salad  
-* Q10 Potatoe  
+* Q10 Potato  
 * Q11 Carrots  
 * Q12 Other Vegetable  
 * Q15 Water  
@@ -1633,7 +1824,7 @@ label(analytic_cohort$race_wo) <- "Is your race White only?"
 label(analytic_cohort$language1) <- "What language do you mainly speak at home?"
 label(analytic_cohort$english_prof) <- "How well do you speak English?"
 
-# YRBS diet and physical activity variables
+# YRBS diet and physical activity composite variables
 label(analytic_cohort$YRBS_diet_total) <- "YRBS Diet Composite"
 label(analytic_cohort$YRBS_physical_total) <- "YRBS Physical Activity Composite"
 
@@ -1649,6 +1840,31 @@ label(analytic_cohort$empower_organization) <- "Organizational Empowerment"
 # anthropometric variables
 label(analytic_cohort$TSF_avg) <- "Triceps Skinfold (mm)"
 label(analytic_cohort$WC_avg) <- "Waist Circumference (cm)"
+
+# YRBS diet items
+label(analytic_cohort$Q7_YRBS_juice) <- "Drink 100% Fruit Juices?"
+label(analytic_cohort$Q8_YRBS_fruit) <- "Eat Fruit?"
+label(analytic_cohort$Q9_YRBS_salad) <- "Eat Green Salad?"
+label(analytic_cohort$Q10_YRBS_potato) <- "Eat Potatoes?"
+label(analytic_cohort$Q11_YRBS_carrot) <- "Eat Carrots?"
+label(analytic_cohort$Q12_YRBS_otherveg) <- "Eat Other Vegetables?"
+label(analytic_cohort$Q13_YRBS_soda) <- "Drink Soda?"
+label(analytic_cohort$Q14_YRBS_sportdrink) <- "Drink a Sports Drink?"
+label(analytic_cohort$Q15_YRBS_water) <- "Drink Plain Water?"
+label(analytic_cohort$Q16_YRBS_milk) <- "Drink Milk?"
+label(analytic_cohort$Q17_YRBS_breakfast) <- "Eat Breakfast?"
+
+# YRBS diet and physical activity items
+label(analytic_cohort$Q19_YRBS_physical) <- "How Many Days Were You Physically Active for ≥ 60 minutes?"
+label(analytic_cohort$Q20_YRBS_strength) <- "How Many Days Did You do Strength Training Exercises?"
+label(analytic_cohort$Q21_YRBS_tv) <- "How Many Hours Did You Watch TV?"
+label(analytic_cohort$Q22_YRBS_screentime) <- "How Many Hours Did You Play Video or Computer Games?"
+
+# YRBS unused items
+label(analytic_cohort$Q18_YRBS_allergy) <- "Foods you avoid due to allergic reaction?"
+label(analytic_cohort$Q23_YRBS_pe) <- "How many school days do you have physical education?"
+label(analytic_cohort$Q24_YRBS_sportsteam) <- "On how many sports teams did you play this year?"
+label(analytic_cohort$Q25_YRBS_concussion) <- "How many times did you have a concussion from playing sports?"
 ```
 
 
@@ -1665,7 +1881,7 @@ setwd(data.path.c1.p1p2)
 ```
 
 
-#Table 1 Sociodemographics{.tabset}
+#Baseline Sociodemographics{.tabset}
 
 Table 1 shows sociodemographic variables, including age, sex, residence, race, and languages spoken. Table 1a shows these sociodemographics for each cohort at baseline. This is the most telling table, and should be used for future publications.
 
@@ -1772,13 +1988,11 @@ Note, this table cannot be created until subsequent phases occur for Cohort 3. N
 
 This analysis attempts to answer the question: "How do the cohorts differ at baseline (Phase 1)?" This question applies to YRBS diet and physical activity scores, self-efficacy, empowerment, and anthropometric measurements.
 
-##Methods
-
-###Violin Plots
+##Violin Plots
 
 The function below creates [violin plots](https://en.wikipedia.org/wiki/Violin_plot) of each variable at baseline by cohort. Violin plots show all the same information as boxplots, but in addition they show the distributions, similar to a histogram.  
 
-###Boxplots
+##Boxplots
 
 Boxplots are overlain on the violin plots. These are Tukey "box and whiskers" plots, where the top and bottom of the box represent the first and third quartiles (i.e. 25th and 75th percentiles), and the middle bar is the median (i.e. 50th percentile). The bottom "whisker" represents the smallest data point that is no more than 1.5 times the inter-quartile range (the distance from the first to third quartiles) below the first quartile. The top "whisker" represents the largest data point that is no more than 1.5 times the inter-quartile range above the third quartile. Points smaller or greater than these whiskers, respectively, are considered outliers and plotted individually.
 
@@ -1910,9 +2124,7 @@ violin_baseline(var = "WC_avg")
 ```
 
 
-#Visualizing Raw Trajectories
-
-##Methods
+#Visualizing Raw Trajectories{.tabset}
 
 ###Spaghetti Plots
 
@@ -2505,29 +2717,270 @@ Spaghetti plots for Cohort 3 cannot be created until data has been collecte for 
 ```
 
 
-#Eliminate missing data
+#Loss to Follow-Up
 
-This is a preliminary analysis done for data collection through summer 2019, which corresponded to Phase 3.1 for Cohort 1, and Phase 2.1 for Cohort 2. Exclusion criteria will be different in the final analysis. For now, individuals will be included with complete data up to Phase 2.1 for Cohort 1, and with complete data up to Phase 2.1 for Cohort 2.  
+This will make a chart that shows the drop out rate for each cohort.
+
+```{r}
+# This will make a chart that shows the loss to follow-up for each cohort.
+analytic_cohort_missstats <- analytic_cohort %>% 
+  mutate(
+    # make missing indicator variable
+    miss_phase = ifelse(test = is.na(phase), yes = 0, no = 1),
+    # make phase labels like in timeline at beginning of Rmd file
+    phase = factor(phase,
+                   levels = c("Phase 1", "Phase 2.1", "Phase 2.2", "Phase 3.1", "Phase 3.2"),
+                   labels = c("Health Training", "Mentor Training", "Mentoring", "Coach Training", "Coaching")
+                   )
+    ) %>% 
+  # remove any observation with missing phase
+  filter(!is.na(phase)) 
+
+# make a plot of non-missing observations
+analytic_cohort_missstats %>% 
+  ggplot(aes(x = phase, y = miss_phase, fill = phase)) +
+  geom_bar(stat = "identity") +
+  facet_grid(cohort~.) +
+  scale_fill_manual(values = rev(wes_palette(n = 5, name = "Zissou1"))) +
+  theme(
+    # center title
+    plot.title = element_text(hjust = 0.5),
+    # remove legend
+    legend.position = "none",
+    # make y-axis text smaller
+    axis.text.y = element_text(size = 10)
+    ) +
+  xlab("\nPhase") +
+  ylab("Number of Participants\n") +
+  ylim(c(0,37)) +
+  ggtitle("Loss to Follow-Up")
+
+# make dataset of two way table for counts
+table(analytic_cohort_missstats$cohort, analytic_cohort_missstats$phase) %>% 
+  kable() %>% 
+  kable_styling(
+      #bootstrap table classes
+      bootstrap_options = c("striped", "hover")
+  )
+```
+
+
+#Restrict to Complete Data
+
+This is a preliminary analysis done for data collection through summer 2019, which corresponded to Phase 3.1 for Cohort 1, and Phase 2.1 for Cohort 2. Exclusion criteria will be different in the final analysis. For now, restrict to those who have not missed a single data measurement phase.
 
 The final dataset should include all participants who completed 3 measurements, i.e. up to Phase 2.1; this is because longitudinal data is defined as 3 or more measurements on the same individual (unit).
 
 By this logic, the paper should be ready to be published January 2021, once 3 measurements are available for Cohort 3.
 
-```{r exclude_preliminary, include=F}
+##Difference between Participants and Drop-Outs?
 
+**Age** was the only statisitcally significant difference among those who participated in and those who dropped out of YouHeaL: participants were 7 months younger on average (p = 0.02). This suggest that older high-school students are more likely to abandon YouHeaL.    
 
-# analytic_cohort %>% 
-#   # exclude all missing data
-#   # filter(!is.na(cohort)) %>% 
-#   group_by(ID) %>% 
-#   if(cohort = "Cohort 1" & phase){
-#     
-#   }
+There were many non-significant differences (p > 0.05) that may be of interest. Participants were more likely to be **female** (76% vs 55%, p = 0.19) and to **speak Spanish at home** (77% vs 60%, p = 0.35). Participants were more likely to be **overweight** (anthropometric measurements greater than the 85th percentile for age and sex adjusted strata): **triceps skin fold** (43% vs 30%, p = 0.513) and **waist circumference** (23% vs 5%, p = 0.18). These differences may be significant when more students enroll in subsequent cohorts and phases.  
 
+```{r exclude_preliminary, echo = FALSE}
+# This chunk will eliminate any participants with missing data at any phase, to select for adolescents that are participating fully.
 
+# select for participants who did not miss a single phase, thus far
+analytic_cohort_nomiss <- analytic_cohort %>% 
+  group_by(ID) %>% 
+  mutate(
+    # https://stackoverflow.com/questions/31661704/remove-group-from-data-frame-if-at-least-one-group-member-meets-condition
+    miss_ind = factor(ifelse(test = any(is.na(phase)), yes = 1, no = 0), levels = c(0, 1), labels = c("Participants", "Lost to Follow-Up")),
+    age = as.double(age),
+    obesity_TSF = obesity_TSF[,1],
+    obesity_WC = obesity_WC[,1],
+    WC_avg = as.double(WC_avg),
+    TSF_avg = as.double(TSF_avg)
+    ) %>% 
+  ungroup() 
+
+analytic_cohort_nomiss_baseline <- analytic_cohort_nomiss %>% 
+  # just get the baseline data for participants with complete data
+  dplyr::filter(phase == "Phase 1")
+
+# vector of variables to be included in Table 1
+table1_nomiss_vars <- c(
+  "age", "sex", "city_LA", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof",
+  "obesity_TSF", "obesity_WC", "TSF_avg", "WC_avg", "WM_avg", "HM_avg")
+
+# vector of categorical variables in analytic dataset
+table1_nomiss_categorical <- c("cohort", "phase", "sex", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof", "obesity_TSF", "obesity_WC")
+
+table1_nomiss <- CreateTableOne(data = analytic_cohort_nomiss_baseline, strata = "miss_ind", vars = table1_nomiss_vars, factorVars = table1_nomiss_categorical, test = TRUE, includeNA = FALSE)
+
+## export table 1 to html
+table1_nomiss_html <- print(table1_nomiss, quote = FALSE, noSpaces = F, printToggle = F, varLabels = T)
+table1_nomiss_html %>% kableone(digits = 3) %>%
+  kable_styling(
+    #bootstrap table classes
+    bootstrap_options = c("striped", "hover")
+  ) %>% 
+  pack_rows("Residence", 4, 4) %>% 
+  pack_rows("Race", 5, 8) %>% 
+  pack_rows("Language", 9, 13) %>% 
+  pack_rows("85th Percentile Anthropometric Measurements", 14, 15) %>% 
+  pack_rows("Anthropometric Measurements", 16, 19)
 ```
 
 
+##Baseline Characteristics of Complete Participants
 
-#Longitudinal Data Analysis
+```{r}
+# dataset with complete cases
+analytic_cohort_completecase <- analytic_cohort_nomiss %>% 
+  # select only participants who completed all phases
+  filter(miss_ind == "Participants") %>% 
+  mutate(
+    # female variable
+    female = ifelse(sex == "Female", yes = 1, no = 0),
+    phase = factor(phase,
+                   levels = c("Phase 1", "Phase 2.1", "Phase 2.2", "Phase 3.1", "Phase 3.2"),
+                   labels = c("Health Training", "Mentor Training", "Mentoring", "Coach Training", "Coaching")
+                   )
 
+  )
+```
+
+```{r}
+# get baseline demographics
+  analytic_cohort_completecase %>% 
+  # just get the baseline data for participants with complete data
+  dplyr::filter(phase == "Health Training") %>% 
+  # just chose relevant demographic variables
+  select(ID, female, race_HL, language1, obesity_TSF, obesity_WC) %>% 
+  mutate(
+    female = ifelse(female == 1, "Yes", "No"),
+    race_HL = ifelse(race_HL == "Hispanic/Latino", "Yes", "No"),
+    language1 = ifelse(language1 == "Spanish", "Yes", "No"),
+    obesity_TSF = ifelse(obesity_TSF == 1, "Yes", "No"),
+    obesity_WC = ifelse(obesity_WC == 1, "Yes", "No")
+  ) %>% 
+  gather(key = "cat_cov", value = "yes_no", -ID) %>% 
+  mutate(
+    yes_no = ifelse(test = is.na(yes_no), yes = "Missing",  no = yes_no),
+    yes_no = factor(yes_no, levels = c("Missing", "No", "Yes"), ordered = TRUE),
+    yes_only = ifelse(yes_no == "Yes", 1, 0),
+    miss_only = ifelse(yes_no == "Missing", 1, 0),
+    cat_cov = factor(cat_cov,
+                     levels = c("female", "race_HL", "language1", "obesity_TSF", "obesity_WC"),
+                     labels = c("Female", "Hispanic/Latino", "Spanish Primary\nLanguage at Home", "≥ 85% Tricep\nSkin Fold", "≥ 85% Waist\nCircumference")),
+    count_yes_no = case_when(
+      yes_no == "Yes" ~ 2,
+      yes_no == "No" ~ 0,
+      yes_no == "Missing" ~ 0
+      ),
+    cat_cov = fct_reorder(.f = cat_cov, .x = count_yes_no, .fun = sum, .desc = FALSE)
+    ) %>% 
+  ggplot(aes(x = cat_cov)) +
+  geom_hline(yintercept = c(.25*30, .50*30, .75*30, 1*30), linetype = 2, alpha = 0.4) +
+  geom_bar(aes(y = yes_only), alpha = 1, stat = "identity", fill = "#990000") +
+  annotate("text", x = 0.7, y = .25*30+1.5, label =  "25%", alpha = 0.4, size = 3.5) +
+  annotate("text", x = 0.7, y = .50*30+1.5, label =  "50%", alpha = 0.4, size = 3.5) +
+  annotate("text", x = 0.7, y = .75*30+1.5, label =  "75%", alpha = 0.4, size = 3.5) +
+  annotate("text", x = 0.7, y = 1.0*30+2, label =  "100%", alpha = 0.4, size = 3.5) +
+  scale_y_continuous() +
+  coord_flip() +
+  ggtitle("Demographic and Clinical Characteristics") +
+  ylab("\nAnalytic Cohort (n = 30)") +
+  xlab("") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "bottom",
+    legend.justification = "center",
+    legend.text = element_text(size = 9),
+    legend.key.height = unit(0.01, "cm"),
+    legend.key.width = unit(2, "cm"),
+    legend.title = element_blank(),
+    legend.margin = margin(.001,.001,.001,.001)
+  ) +
+  # how to make legend order match data order
+  #   https://github.com/tidyverse/ggplot2/issues/1886
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+#Longitudinal Data Analysis{.tabset}
+
+```{r}
+# analytic_cohort_completecase %>% 
+#   mutate(Q7_YRBS_juice = str_wrap(Q7_YRBS_juice, 28)) %>% 
+#     ggplot(aes(x = phase, y = fct_rev(Q7_YRBS_juice), group = ID, color = cohort)) +
+#     geom_line(aes(alpha = 0.01)) +
+#     # add theme colors (set in first chunk)
+#     yh_cohort_colors() +
+#     # remove legend
+#     theme(
+#       plot.title = element_text(hjust = 0.5),
+#       legend.position = "none",
+#       axis.text.x = element_text(size = 10),
+#       axis.text.y = element_text(size = 10)
+#       ) +
+#     stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.5, color = "black", linetype = 2) +
+#   ggtitle(label(analytic_cohort[["Q7_YRBS_juice"]])) +
+#   ylab("") +
+#   xlab(label = "\nPhase")
+
+# index variable for number of words to wrap item responses
+wrap_var <- 28
+
+# function to plot individual items
+plot_complete_items <- function(variable){
+  
+  analytic_cohort_completecase %>% 
+    drop_na_(variable) %>% 
+    ggplot(aes(x = phase, y = !!variable, group = ID, color = cohort)) +
+    geom_line(aes(alpha = 0.01)) +
+    # add theme colors (set in first chunk)
+    scale_y_discrete(labels = wrap_format(28)) +
+    yh_cohort_colors() +
+    # remove legend
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      legend.position = "none",
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10)
+      ) +
+    stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.5, color = "black", linetype = 2) +
+  ylab("") +
+  xlab(label = "\nPhase")
+  
+}
+```
+
+##Diet YRBS Items
+
+```{r}
+plot_complete_items(quo(Q7_YRBS_juice)) + ggtitle(label(analytic_cohort[["Q7_YRBS_juice"]]))
+plot_complete_items(quo(Q8_YRBS_fruit)) + ggtitle(label(analytic_cohort[["Q8_YRBS_fruit"]]))
+plot_complete_items(quo(Q9_YRBS_salad)) + ggtitle(label(analytic_cohort[["Q9_YRBS_salad"]]))
+plot_complete_items(quo(Q10_YRBS_potato)) + ggtitle(label(analytic_cohort[["Q10_YRBS_potato"]]))
+plot_complete_items(quo(Q11_YRBS_carrot)) + ggtitle(label(analytic_cohort[["Q11_YRBS_carrot"]]))
+plot_complete_items(quo(Q12_YRBS_otherveg)) + ggtitle(label(analytic_cohort[["Q12_YRBS_otherveg"]]))
+plot_complete_items(quo(Q13_YRBS_soda)) + ggtitle(label(analytic_cohort[["Q13_YRBS_soda"]]))
+plot_complete_items(quo(Q14_YRBS_sportdrink)) + ggtitle(label(analytic_cohort[["Q14_YRBS_sportdrink"]]))
+plot_complete_items(quo(Q15_YRBS_water)) + ggtitle(label(analytic_cohort[["Q15_YRBS_water"]]))
+plot_complete_items(quo(Q16_YRBS_milk)) + ggtitle(label(analytic_cohort[["Q16_YRBS_milk"]]))
+plot_complete_items(quo(Q17_YRBS_breakfast)) + ggtitle(label(analytic_cohort[["Q17_YRBS_breakfast"]]))
+```
+
+
+##Physical YRBS Items
+
+
+```{r}
+plot_complete_items(quo(Q19_YRBS_physical)) + ggtitle(label(analytic_cohort[["Q19_YRBS_physical"]]))
+plot_complete_items(quo(Q20_YRBS_strength)) + ggtitle(label(analytic_cohort[["Q20_YRBS_strength"]]))
+plot_complete_items(quo(Q21_YRBS_tv)) + ggtitle(label(analytic_cohort[["Q21_YRBS_tv"]]))
+plot_complete_items(quo(Q22_YRBS_screentime)) + ggtitle(label(analytic_cohort[["Q22_YRBS_screentime"]]))
+```
+
+
+##Excluded YRBS Items
+
+```{r}
+plot_complete_items(quo(Q18_YRBS_allergy)) + ggtitle(label(analytic_cohort[["Q18_YRBS_allergy"]]))
+plot_complete_items(quo(Q23_YRBS_pe)) + ggtitle(label(analytic_cohort[["Q23_YRBS_pe"]]))
+plot_complete_items(quo(Q24_YRBS_sportsteam)) + ggtitle(label(analytic_cohort[["Q24_YRBS_sportsteam"]]))
+plot_complete_items(quo(Q25_YRBS_concussion)) + ggtitle(label(analytic_cohort[["Q25_YRBS_concussion"]]))
+```

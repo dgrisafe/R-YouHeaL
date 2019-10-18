@@ -45,6 +45,9 @@ library(lubridate)    # allows adding months to dates
 library(scales)
 library(wesanderson)
 
+col_usc_red <- "#990000"
+col_usc_yel <- "#FFCC00"
+
 # function that sets manual colors on plots
 yh_cohort_colors <- function(){
   # color patterns for cohorts
@@ -67,7 +70,7 @@ Each cohort is larger than the last, propagating healthy lifestyle habits to inc
 
 ##Timeline, timelineS
 
-Try creating a timeline using the [timelineS package](https://github.com/daheelee/timelineS).
+Timeline created using the [timelineS package](https://github.com/daheelee/timelineS).
 
 ```{r timeline_timelineS, echo = FALSE, include = FALSE, message = FALSE}
 # function that creates timeline data
@@ -205,6 +208,9 @@ dev.off()
 ![](YouHeaL_ggtimeline_all.png)
 
 ##Timeline, vistime
+
+Timeline created using the [vistime package](https://github.com/shosaco/vistime).
+
 ```{r timeline_vistime, echo = FALSE, include = FALSE, message = FALSE}
 
 # start dates for different phases of cohort 1
@@ -1758,11 +1764,11 @@ analytic_cohort$WC_avg <- analytic_cohort %>% select(starts_with("WC")) %>% appl
 analytic_cohort$WM_avg <- analytic_cohort %>% select(starts_with("WM")) %>% apply(MARGIN = 1, FUN = mean, na.rm = TRUE)
 analytic_cohort$HM_avg <- analytic_cohort %>% select(starts_with("HM")) %>% apply(MARGIN = 1, FUN = mean, na.rm = TRUE)
 
-# obesity defined by triceps skinfold >= 85th percentile
-analytic_cohort$obesity_TSF <- analytic_cohort %>% 
-  select(sex, age, TSF_avg) %>% 
-  apply(MARGIN = 2, FUN = function(sex = analytic_cohort$sex, age = analytic_cohort$age, TSF_avg = analytic_cohort$TSF_avg){
-    ifelse(
+analytic_cohort <- analytic_cohort %>%
+  mutate(
+    
+    # obesity defined by triceps skinfold >= 85th percentile
+    obesity_TSF = ifelse(
       sex == "Male" & age == 13 & TSF_avg >= 21.8, yes = 1, no = ifelse(
       sex == "Male" & age == 14 & TSF_avg >= 20.5, yes = 1, no = ifelse(
       sex == "Male" & age == 15 & TSF_avg >= 20.1, yes = 1, no = ifelse(
@@ -1778,15 +1784,10 @@ analytic_cohort$obesity_TSF <- analytic_cohort %>%
       sex == "Female" & age == 18 & TSF_avg >= 26.6, yes = 1, no = ifelse(
       sex == "Female" & age == 19 & TSF_avg >= 30.5, yes = 1, no = 0
       )))))))))))))
-    )
-  }
-  )
-
-# obesity defined by waist circumference >= 85th percentile
-analytic_cohort$obesity_WC <- analytic_cohort %>% 
-  select(sex, age, WC_avg) %>% 
-  apply(MARGIN = 2, FUN = function(sex = analytic_cohort$sex, age = analytic_cohort$age, WC_avg = analytic_cohort$WC_avg){
-    ifelse(
+    ),
+    
+    # obesity defined by waist circumference >= 85th percentile
+    obesity_WC = ifelse(
       sex == "Male" & age == 13 & WC_avg >= 90.8, yes = 1, no = ifelse(
       sex == "Male" & age == 14 & WC_avg >= 93.9, yes = 1, no = ifelse(
       sex == "Male" & age == 15 & WC_avg >= 94.8, yes = 1, no = ifelse(
@@ -1803,8 +1804,8 @@ analytic_cohort$obesity_WC <- analytic_cohort %>%
       sex == "Female" & age == 19 & WC_avg >= 103.2, yes = 1, no = 0
       )))))))))))))
     )
-  }
-  )
+  ) 
+
 ```
 
 
@@ -1865,6 +1866,10 @@ label(analytic_cohort$Q18_YRBS_allergy) <- "Foods you avoid due to allergic reac
 label(analytic_cohort$Q23_YRBS_pe) <- "How many school days do you have physical education?"
 label(analytic_cohort$Q24_YRBS_sportsteam) <- "On how many sports teams did you play this year?"
 label(analytic_cohort$Q25_YRBS_concussion) <- "How many times did you have a concussion from playing sports?"
+
+# anthropometric variables
+label(analytic_cohort$obesity_TSF) <- "≥ 85% Triceps Skin Fold"
+label(analytic_cohort$obesity_WC) <- "≥ 85% Waist Circumference"
 ```
 
 
@@ -2102,7 +2107,7 @@ violin_baseline(var = "empower_organization")
 ```
 
 
-###Anthropometric
+###Anthropometric Measurements
 
 ####Triceps Skinfold
 
@@ -2264,7 +2269,7 @@ spaghetSex_all("empower_organization")
 
 
 
-###Anthropometric
+###Anthropometric Measurements
 
 ####Triceps Skinfold
 
@@ -2422,7 +2427,7 @@ spaghetSex("empower_organization", "Cohort 1")
 
 
 
-###Anthropometric
+###Anthropometric Measurements
 
 ####Triceps Skinfold
 
@@ -2556,7 +2561,7 @@ spaghetSex("empower_organization", "Cohort 2")
 
 
 
-###Anthropometric
+###Anthropometric Measurements
 
 ####Triceps Skinfold
 
@@ -2689,7 +2694,7 @@ Spaghetti plots for Cohort 3 cannot be created until data has been collecte for 
 
 
 
-###Anthropometric
+###Anthropometric Measurements
 
 ####Triceps Skinfold
 
@@ -2767,19 +2772,19 @@ table(analytic_cohort_missstats$cohort, analytic_cohort_missstats$phase) %>%
 
 #Restrict to Complete Data
 
-This is a preliminary analysis done for data collection through summer 2019, which corresponded to Phase 3.1 for Cohort 1, and Phase 2.1 for Cohort 2. Exclusion criteria will be different in the final analysis. For now, restrict to those who have not missed a single data measurement phase.
+```{r, include=FALSE}
 
-The final dataset should include all participants who completed 3 measurements, i.e. up to Phase 2.1; this is because longitudinal data is defined as 3 or more measurements on the same individual (unit).
+# This is a preliminary analysis done for data collection through summer 2019, which corresponded to Phase 3.1 for Cohort 1, and Phase 2.1 for Cohort 2. Exclusion criteria will be different in the final analysis. For now, restrict to those who have not missed a single data measurement phase.
+# 
+# The final dataset should include all participants who completed 3 measurements, i.e. up to Phase 2.1; this is because longitudinal data is defined as 3 or more measurements on the same individual (unit).
+# 
+# By this logic, the paper should be ready to be published January 2021, once 3 measurements are available for Cohort 3.
 
-By this logic, the paper should be ready to be published January 2021, once 3 measurements are available for Cohort 3.
+# **Age** was the only statisitcally significant difference among those who participated in and those who dropped out of YouHeaL: participants were 7 months younger on average (p = 0.02). This suggest that older high-school students are more likely to abandon YouHeaL.    
+# 
+# There were many non-significant differences (p > 0.05) that may be of interest. Participants were more likely to be **female** (76% vs 55%, p = 0.19) and to **speak Spanish at home** (77% vs 60%, p = 0.35). Participants were more likely to be **overweight** (anthropometric measurements greater than the 85th percentile for age and sex adjusted strata): **triceps skin fold** (43% vs 30%, p = 0.513) and **waist circumference** (23% vs 5%, p = 0.18). These differences may be significant when more students enroll in subsequent cohorts and phases.  
 
-##Difference between Participants and Drop-Outs?
 
-**Age** was the only statisitcally significant difference among those who participated in and those who dropped out of YouHeaL: participants were 7 months younger on average (p = 0.02). This suggest that older high-school students are more likely to abandon YouHeaL.    
-
-There were many non-significant differences (p > 0.05) that may be of interest. Participants were more likely to be **female** (76% vs 55%, p = 0.19) and to **speak Spanish at home** (77% vs 60%, p = 0.35). Participants were more likely to be **overweight** (anthropometric measurements greater than the 85th percentile for age and sex adjusted strata): **triceps skin fold** (43% vs 30%, p = 0.513) and **waist circumference** (23% vs 5%, p = 0.18). These differences may be significant when more students enroll in subsequent cohorts and phases.  
-
-```{r exclude_preliminary, echo = FALSE}
 # This chunk will eliminate any participants with missing data at any phase, to select for adolescents that are participating fully.
 
 # select for participants who did not miss a single phase, thus far
@@ -2787,14 +2792,44 @@ analytic_cohort_nomiss <- analytic_cohort %>%
   group_by(ID) %>% 
   mutate(
     # https://stackoverflow.com/questions/31661704/remove-group-from-data-frame-if-at-least-one-group-member-meets-condition
-    miss_ind = factor(ifelse(test = any(is.na(phase)), yes = 1, no = 0), levels = c(0, 1), labels = c("Participants", "Lost to Follow-Up")),
+    participant = factor(ifelse(test = n() == 2, yes = 1, no = 0), levels = c(1, 0), labels = c("Participants", "Lost to Follow-Up")),
     age = as.double(age),
-    obesity_TSF = obesity_TSF[,1],
-    obesity_WC = obesity_WC[,1],
+    obesity_TSF = as.double(obesity_TSF),
+    obesity_WC = as.double(obesity_WC),
     WC_avg = as.double(WC_avg),
     TSF_avg = as.double(TSF_avg)
     ) %>% 
   ungroup() 
+```
+
+This is a preliminary analysis done for up to **Phase 2.1** for both **Cohort 1** and **Cohort 2**. Exclusion criteria will be different in the final analysis.
+
+The final dataset will include all participants who completed 3 measurements, i.e. up to Phase 2.2; this is because longitudinal data is defined as 3 or more measurements on the same individual (unit).
+
+By this logic, the paper should be ready to be published January 2021, once 3 measurements are available for Cohort 3.
+
+Note, we did not include Cohort 1 past phase 2.1—even though we have data from later phases for Cohort 1—because there is low power when looking at this cohort alone. Eventually we will include all data from all participants with at least 3 completed phases, but for now, this is the best way to balance power with longitudinal
+
+##Difference between Participants and Drop-Outs?
+
+
+```{r exclude_preliminary, echo = FALSE}
+
+# select for participants who did not miss a single phase, thus far
+analytic_cohort_nomiss <- analytic_cohort %>%
+  group_by(ID) %>%
+  # for this preliminary analysis, only including the first 2 phases...eventually
+  filter(phase %in% c("Phase 1", "Phase 2.1")) %>%
+  mutate(
+    participant = factor(ifelse(test = n() == 2, yes = 1, no = 0), levels = c(1, 0), labels = c("Participants", "Lost to Follow-Up")),
+    age = as.double(age),
+    obesity_TSF = as.double(obesity_TSF),
+    obesity_WC = as.double(obesity_WC),
+    WC_avg = as.double(WC_avg),
+    TSF_avg = as.double(TSF_avg)
+    ) %>%
+  ungroup()
+
 
 analytic_cohort_nomiss_baseline <- analytic_cohort_nomiss %>% 
   # just get the baseline data for participants with complete data
@@ -2808,7 +2843,7 @@ table1_nomiss_vars <- c(
 # vector of categorical variables in analytic dataset
 table1_nomiss_categorical <- c("cohort", "phase", "sex", "race_HL", "race_AAB", "race_asian", "race_wo", "language1", "english_prof", "obesity_TSF", "obesity_WC")
 
-table1_nomiss <- CreateTableOne(data = analytic_cohort_nomiss_baseline, strata = "miss_ind", vars = table1_nomiss_vars, factorVars = table1_nomiss_categorical, test = TRUE, includeNA = FALSE)
+table1_nomiss <- CreateTableOne(data = analytic_cohort_nomiss_baseline, strata = "participant", vars = table1_nomiss_vars, factorVars = table1_nomiss_categorical, test = TRUE, includeNA = FALSE)
 
 ## export table 1 to html
 table1_nomiss_html <- print(table1_nomiss, quote = FALSE, noSpaces = F, printToggle = F, varLabels = T)
@@ -2821,7 +2856,7 @@ table1_nomiss_html %>% kableone(digits = 3) %>%
   pack_rows("Race", 5, 8) %>% 
   pack_rows("Language", 9, 13) %>% 
   pack_rows("85th Percentile Anthropometric Measurements", 14, 15) %>% 
-  pack_rows("Anthropometric Measurements", 16, 19)
+  pack_rows("Anthropometric Measurements", 16, 17)
 ```
 
 
@@ -2831,7 +2866,7 @@ table1_nomiss_html %>% kableone(digits = 3) %>%
 # dataset with complete cases
 analytic_cohort_completecase <- analytic_cohort_nomiss %>% 
   # select only participants who completed all phases
-  filter(miss_ind == "Participants") %>% 
+  filter(participant == "Participants") %>% 
   mutate(
     # female variable
     female = ifelse(sex == "Female", yes = 1, no = 0),
@@ -2843,7 +2878,17 @@ analytic_cohort_completecase <- analytic_cohort_nomiss %>%
   )
 ```
 
+#Deomgraphics at Baseline
+
 ```{r}
+
+# create vector that indicates how many phases including in analysis
+n_phases <- 2
+
+# create vector that illustrates the number of participants in the sample 
+n_participants <- analytic_cohort_completecase %>% 
+  group_by(ID) %>% nrow() / n_phases
+
 # get baseline demographics
   analytic_cohort_completecase %>% 
   # just get the baseline data for participants with complete data
@@ -2874,16 +2919,16 @@ analytic_cohort_completecase <- analytic_cohort_nomiss %>%
     cat_cov = fct_reorder(.f = cat_cov, .x = count_yes_no, .fun = sum, .desc = FALSE)
     ) %>% 
   ggplot(aes(x = cat_cov)) +
-  geom_hline(yintercept = c(.25*30, .50*30, .75*30, 1*30), linetype = 2, alpha = 0.4) +
-  geom_bar(aes(y = yes_only), alpha = 1, stat = "identity", fill = "#990000") +
-  annotate("text", x = 0.7, y = .25*30+1.5, label =  "25%", alpha = 0.4, size = 3.5) +
-  annotate("text", x = 0.7, y = .50*30+1.5, label =  "50%", alpha = 0.4, size = 3.5) +
-  annotate("text", x = 0.7, y = .75*30+1.5, label =  "75%", alpha = 0.4, size = 3.5) +
-  annotate("text", x = 0.7, y = 1.0*30+2, label =  "100%", alpha = 0.4, size = 3.5) +
+  geom_hline(yintercept = c(.25*n_participants, .50*n_participants, .75*n_participants, 1*n_participants), linetype = 2, alpha = 0.4) +
+  geom_bar(aes(y = yes_only), alpha = 1, stat = "identity", fill = col_usc_red) +
+  annotate("text", x = 0.7, y = .25*n_participants+1.5, label =  "25%", alpha = 0.4, size = 3.5) +
+  annotate("text", x = 0.7, y = .50*n_participants+1.5, label =  "50%", alpha = 0.4, size = 3.5) +
+  annotate("text", x = 0.7, y = .75*n_participants+1.5, label =  "75%", alpha = 0.4, size = 3.5) +
+  annotate("text", x = 0.7, y = 1.0*n_participants+2, label =  "100%", alpha = 0.4, size = 3.5) +
   scale_y_continuous() +
   coord_flip() +
   ggtitle("Demographic and Clinical Characteristics") +
-  ylab("\nAnalytic Cohort (n = 30)") +
+  ylab(paste0("\nAnalytic Cohort (n = ", n_participants,")")) +
   xlab("") +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -2900,7 +2945,378 @@ analytic_cohort_completecase <- analytic_cohort_nomiss %>%
   guides(fill = guide_legend(reverse = TRUE))
 ```
 
-#Longitudinal Data Analysis{.tabset}
+#Longitudinal Data Analysis
+
+This next chunk creates interval scores for each item response. This will allow statistical testing of follow-up data.
+
+```{r}
+# convert ordinal item responses into interval format, individual food items
+ordinal2interval_food <- function(item){
+  case_when(
+      str_detect(item, "4 or more times") ~ 4,
+      str_detect(item, "3 times") ~ 3,
+      str_detect(item, "2 times") ~ 2,
+      str_detect(item, "1 time") ~ 1,
+      str_detect(item, "4 to 6 times") ~ mean(c(4/7, 6/7)),
+      str_detect(item, "1 to 3 times") ~ mean(c(1/7, 3/7)),
+      str_detect(item, "I did not") ~ 0
+  )
+}
+
+# convert ordinal item responses into interval format, activity items
+ordinal2interval_activity <- function(item){
+  case_when(
+      str_detect(item, "7 days") ~ 7,
+      str_detect(item, "6 days") ~ 6,
+      str_detect(item, "5 days") ~ 5,
+      str_detect(item, "4 days") ~ 4,
+      str_detect(item, "3 days") ~ 3,
+      str_detect(item, "2 days") ~ 2,
+      str_detect(item, "1 day") ~ 1,
+      str_detect(item, "0 days") ~ 0
+  )
+}
+
+# convert ordinal item responses into interval format, activity items on hourly rate
+ordinal2interval_hourly <- function(item){
+  case_when(
+      str_detect(item, "5 hours") ~ 5,
+      str_detect(item, "4 hours") ~ 4,
+      str_detect(item, "3 hours") ~ 3,
+      str_detect(item, "2 hours") ~ 2,
+      as.double(item) == 3 ~ 1,         # "1 hour per day"
+      as.double(item) == 2 ~ 0.5,       # "Less than 1 hour per day"
+      str_detect(item, "I do not") ~ 0
+  )
+}
+
+# create new dataset with interval values for item responses
+analytic_cohort_compcase_interval <- analytic_cohort_completecase %>% 
+  mutate(
+    
+    # food items
+    Q7_YRBS_juice = ordinal2interval_food(Q7_YRBS_juice),
+    Q8_YRBS_fruit = ordinal2interval_food(Q8_YRBS_fruit),
+    Q9_YRBS_salad = ordinal2interval_food(Q9_YRBS_salad),
+    Q10_YRBS_potato = ordinal2interval_food(Q10_YRBS_potato),
+    Q11_YRBS_carrot = ordinal2interval_food(Q11_YRBS_carrot),
+    Q12_YRBS_otherveg = ordinal2interval_food(Q12_YRBS_otherveg),
+    Q13_YRBS_soda = ordinal2interval_food(Q13_YRBS_soda),
+    Q14_YRBS_sportdrink = ordinal2interval_food(Q14_YRBS_sportdrink),
+    Q15_YRBS_water = ordinal2interval_food(Q15_YRBS_water),
+    
+    # milk has it's own formatting
+    Q16_YRBS_milk = case_when(
+      str_detect(Q16_YRBS_milk, "4 or more glasses") ~ 4,
+      str_detect(Q16_YRBS_milk, "3 glasses") ~ 3,
+      str_detect(Q16_YRBS_milk, "2 glasses") ~ 2,
+      str_detect(Q16_YRBS_milk, "1 glass") ~ 1,
+      str_detect(Q16_YRBS_milk, "4 to 6 glasses") ~ mean(c(4/7, 6/7)),
+      str_detect(Q16_YRBS_milk, "1 to 3 glasses") ~ mean(c(1/7, 3/7)),
+      str_detect(Q16_YRBS_milk, "I did not") ~ 0
+      ),
+    
+    # activity items
+    Q17_YRBS_breakfast = ordinal2interval_activity(Q17_YRBS_breakfast),
+    Q19_YRBS_physical = ordinal2interval_activity(Q19_YRBS_physical),
+    Q20_YRBS_strength = ordinal2interval_activity(Q20_YRBS_strength),
+    
+    # hourly activity items
+    Q21_YRBS_tv = ordinal2interval_hourly(Q21_YRBS_tv),
+    Q22_YRBS_screentime = ordinal2interval_hourly(Q22_YRBS_screentime)
+  )
+```
+
+##Paired T-Tests
+
+```{r}
+# Wilcoxon signed rank test with continuity correction: non-parametric, paired t-test
+#   https://stats.idre.ucla.edu/other/mult-pkg/whatstat/
+test_diff <- function(item){
+  
+  dataframe <- analytic_cohort_compcase_interval
+  
+  # format variable of interest so it removes missing
+  dataframe$var <- dataframe[[item]] %>% as.double()
+  
+  dataframe <- dataframe %>%
+    # format independent, phase variable for statistical test
+    mutate(groupings = factor(phase, c("Mentor Training", "Health Training"), ordered = TRUE)) %>%
+    # group by ID
+    group_by(ID) %>%
+    # remove observation if one of the observations is missing at baseline or follow-up
+    filter(!is.na(sum(var))) %>%
+    ungroup()
+  
+  # make an index of the number of observations
+  n_people <- dataframe %>% nrow() / 2
+
+  test <- t.test(formula = dataframe$var ~ dataframe[["groupings"]], conf.int = TRUE, conf.level = 0.95, exact=FALSE, paired = TRUE, alternative = "two.sided", correct = FALSE)
+
+  c(item, test$estimate, test$conf.int, test$p.value, test$alternative, test$method, n_people)
+}
+
+# function that formats the 
+test_diff_format <- function(dataframe){
+  dataframe %>% 
+    # name the columns
+    rename(item = V1, estimate = "mean of the differences", high_95cl = V3, low_95cl = V4, p_val = V5, alternative = V6, test = V7, n = V8) %>%
+    # add a column with p-values adjusted for multiple comparisons
+    cbind(p_val_adj = as.double(as.character(.$p_val)) %>% p.adjust(method = "bonferroni")) %>% 
+    # reorder column
+    select(item, estimate, low_95cl, high_95cl, p_val, p_val_adj, alternative, test, n) %>%
+    # format as numeric variables
+    mutate(
+      estimate = estimate %>% as.character() %>% as.double(),
+      low_95cl = low_95cl %>% as.character() %>% as.double(),
+      high_95cl = high_95cl %>% as.character() %>% as.double(),
+      p_val = p_val %>% as.character() %>% as.double(),
+      p_val_adj = p_val_adj %>% as.character() %>% as.double()
+    ) 
+}
+```
+
+###Diet YRBS
+
+```{r}
+# data frame of test results
+test_results_diet <- as.data.frame(rbind(
+  test_diff("Q7_YRBS_juice"),
+  test_diff("Q8_YRBS_fruit"),
+  test_diff("Q9_YRBS_salad"),
+  test_diff("Q10_YRBS_potato"),
+  test_diff("Q11_YRBS_carrot"),
+  test_diff("Q12_YRBS_otherveg"),
+  test_diff("Q13_YRBS_soda"),
+  test_diff("Q14_YRBS_sportdrink"),
+  test_diff("Q15_YRBS_water"),
+  test_diff("Q16_YRBS_milk"),
+  test_diff("Q17_YRBS_breakfast")
+  
+)) %>% 
+  # call function that formats test results
+  test_diff_format()
+
+# make a plot showing the effect sizes of the differences
+test_results_diet %>%
+  # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
+  # filter(p_val < 0.05) %>%
+  mutate(item = case_when(
+      str_detect(item, "juice") ~ "100% Fruit Juices",
+      str_detect(item, "fruit") ~ "Fruits",
+      str_detect(item, "salad") ~ "Green Salads*",
+      str_detect(item, "potato") ~ "Potatoes",
+      str_detect(item, "carrot") ~ "Carrots",
+      str_detect(item, "otherveg") ~ "Other Vegetables",
+      str_detect(item, "soda") ~ "Soda",
+      str_detect(item, "sportdrink") ~ "Sports Drinks",
+      str_detect(item, "water") ~ "Water*",
+      str_detect(item, "milk") ~ "Milk",
+      str_detect(item, "breakfast") ~ "Breakfast"
+  )) %>%
+  ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
+  geom_bar(stat = "identity", fill = col_usc_yel) +
+  coord_flip() +
+  scale_y_continuous(limits = c(-0.11, 0.75), breaks = seq(0, 0.75, 0.25)) +
+  labs(caption = "* p-value < 0.05") +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.text.y = element_text(size = 10),
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    plot.caption = element_text(size = 10)
+  ) +
+  xlab("") +
+  ylab("\nDifference From Baseline to Follow-Up") +
+  ggtitle("In the Past Week, How Often Did You Consume...")
+
+# make pretty html table
+test_results_diet %>% 
+  kable(digits = 3) %>% 
+  #bootstrap table classes
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+###Physical YRBS
+```{r}
+# data frame of test results
+test_results_physical <- as.data.frame(rbind(
+  
+  test_diff("Q19_YRBS_physical"),
+  test_diff("Q20_YRBS_strength"),
+  test_diff("Q21_YRBS_tv"),
+  test_diff("Q22_YRBS_screentime")
+  
+  # test_diff("Q18_YRBS_allergy"),
+  # test_diff("Q23_YRBS_pe"),
+  # test_diff("Q24_YRBS_sportsteam"),
+  # test_diff("Q25_YRBS_concussion")
+  
+)) %>% 
+  # call function that formats test results
+  test_diff_format()
+
+# physical activity
+test_results_physical %>%
+  # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
+  # filter(p_val < 0.05) %>%
+  filter(item %in% c("Q19_YRBS_physical", "Q20_YRBS_strength")) %>% 
+  mutate(item = case_when(
+      str_detect(item, "physical") ~ "Physically Active\n≥ 1 Hour",
+      str_detect(item, "strength") ~ "Strength Training"
+  )) %>%
+  ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
+  geom_bar(stat = "identity", fill = col_usc_red) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 0.75), breaks = seq(0, 0.75, 0.25)) +
+  labs(caption = "* p-value < 0.05") +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    plot.caption = element_text(size = 10)
+  ) +
+  xlab("") +
+  ylab("\nDifference From Baseline to Follow-Up") +
+  ggtitle("In the Past Week, How Many Days Were You...")
+
+# screen time
+test_results_physical %>%
+  # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
+  # filter(p_val < 0.05) %>%
+  filter(item %in% c("Q21_YRBS_tv", "Q22_YRBS_screentime")) %>% 
+  mutate(item = case_when(
+      str_detect(item, "tv") ~ "Watch TV",
+      str_detect(item, "screentime") ~ "Play Video Games\nor Use Social Media"
+  )) %>%
+  ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
+  geom_bar(stat = "identity", fill = col_usc_yel) +
+  coord_flip() +
+  scale_x_discrete(position = "top") +
+  scale_y_continuous(limits = c(-0.5, 0), breaks = seq(-0.5, 0, 0.25)) +
+  labs(caption = "* p-value < 0.05") +
+  theme(
+    plot.title = element_text(size = 14),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    plot.caption = element_text(size = 10)
+  ) +
+  xlab("") +
+  ylab("\nDifference From Baseline to Follow-Up") +
+  ggtitle("On an Average School Day, How Many Hours Did You...")
+
+# make pretty html table
+test_results_physical %>% 
+  kable(digits = 2) %>% 
+  #bootstrap table classes
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+##McNemar's Chi-squared Tests
+
+```{r}
+
+# McNemar's Chi-squared test with continuity correction: non-parametric, paired Chi-squared test
+#   https://stats.idre.ucla.edu/other/mult-pkg/whatstat/
+test_diff_cat <- function(item){
+  
+  dataframe <- analytic_cohort_compcase_interval
+  
+  # format variable of interest so it removes missing
+  dataframe$var <- dataframe[[item]] %>% as.double()
+  
+  dataframe <- dataframe %>%
+    # format independent, phase variable for statistical test
+    mutate(groupings = factor(phase, c("Mentor Training", "Health Training"), ordered = TRUE)) %>%
+    # group by ID
+    group_by(ID) %>%
+    # remove observation if one of the observations is missing at baseline or follow-up
+    filter(!is.na(sum(var))) %>%
+    ungroup()
+  
+  # make an index of the number of observations
+  n_people <- dataframe %>% nrow() / 2
+
+  test <- mcnemar.test(x = dataframe[["groupings"]], y = dataframe$var)
+  
+  var_time0 <- dataframe %>% filter(groupings == "Health Training") %>% summarise(mean(var))
+  var_time1 <- dataframe %>% filter(groupings == "Mentor Training") %>% summarise(mean(var))
+  
+  test$estimate <- as.double(var_time1) - as.double(var_time0)
+
+  c(item, test$estimate, test$p.value, test$method, n_people)
+  
+}
+
+# function that formats the test results data frame
+test_diff_format_cat <- function(dataframe){
+  dataframe %>% 
+    # name the columns
+    rename(item = V1, estimate = V2, p_val = V3, test = V4, n = V5) %>%
+    # add a column with p-values adjusted for multiple comparisons
+    cbind(p_val_adj = as.double(as.character(.$p_val)) %>% p.adjust(method = "bonferroni")) %>% 
+    # reorder column
+    select(item, estimate, p_val, p_val_adj, test, n) %>%
+    # format as numeric variables
+    mutate(
+      estimate = estimate %>% as.character() %>% as.double(),
+      p_val = p_val %>% as.character() %>% as.double(),
+      p_val_adj = p_val_adj %>% as.character() %>% as.double()
+    ) 
+}
+```
+
+###Anthropometric Measurements ≥85th Percentiles
+
+Proportion with triceps skin fold (mm) or waist circumference (cm) greater than or equal to the 85th percentiles for age and sex strata.
+
+```{r}
+# data frame of test results
+test_results_anthro <- as.data.frame(rbind(
+  
+  test_diff_cat("obesity_TSF"),
+  test_diff_cat("obesity_WC")
+  
+)) %>% 
+  # call function that formats test results
+  test_diff_format_cat()
+
+# physical activity
+test_results_anthro %>%
+  # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
+  # filter(p_val < 0.05) %>%
+  mutate(item = case_when(
+      str_detect(item, "TSF") ~ "≥ 85% Triceps\nSkin Fold",
+      str_detect(item, "WC") ~ "≥ 85% Waist\nCircumference*"
+  )) %>%
+  ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
+  geom_bar(stat = "identity", fill = col_usc_red) +
+  coord_flip() +
+  scale_y_continuous(limits = c(-0.05, 0.2), breaks = seq(-0.05, 0.2, 0.05), labels = scales::percent_format(accuracy = 1)) +
+  labs(caption = "* p-value < 0.05") +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    plot.caption = element_text(size = 10)
+  ) +
+  xlab("") +
+  ylab("\nDifference From Baseline to Follow-Up") +
+  ggtitle("Proportion Overweight by Body Measurements")
+
+# make pretty html table
+test_results_anthro %>% 
+  kable(digits = 2) %>% 
+  #bootstrap table classes
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+
+
+##Plots of Items at Baseline and Follow-Up{.tabset}
 
 ```{r}
 # analytic_cohort_completecase %>% 
@@ -2932,7 +3348,7 @@ plot_complete_items <- function(variable){
     ggplot(aes(x = phase, y = !!variable, group = ID, color = cohort)) +
     geom_line(aes(alpha = 0.01)) +
     # add theme colors (set in first chunk)
-    scale_y_discrete(labels = wrap_format(28)) +
+    scale_y_discrete(labels = wrap_format(28), drop=FALSE) +
     yh_cohort_colors() +
     # remove legend
     theme(
@@ -2948,9 +3364,9 @@ plot_complete_items <- function(variable){
 }
 ```
 
-##Diet YRBS Items
+###Diet YRBS Items
 
-```{r}
+```{r, message=FALSE}
 plot_complete_items(quo(Q7_YRBS_juice)) + ggtitle(label(analytic_cohort[["Q7_YRBS_juice"]]))
 plot_complete_items(quo(Q8_YRBS_fruit)) + ggtitle(label(analytic_cohort[["Q8_YRBS_fruit"]]))
 plot_complete_items(quo(Q9_YRBS_salad)) + ggtitle(label(analytic_cohort[["Q9_YRBS_salad"]]))
@@ -2965,10 +3381,10 @@ plot_complete_items(quo(Q17_YRBS_breakfast)) + ggtitle(label(analytic_cohort[["Q
 ```
 
 
-##Physical YRBS Items
+###Physical YRBS Items
 
 
-```{r}
+```{r, message=FALSE}
 plot_complete_items(quo(Q19_YRBS_physical)) + ggtitle(label(analytic_cohort[["Q19_YRBS_physical"]]))
 plot_complete_items(quo(Q20_YRBS_strength)) + ggtitle(label(analytic_cohort[["Q20_YRBS_strength"]]))
 plot_complete_items(quo(Q21_YRBS_tv)) + ggtitle(label(analytic_cohort[["Q21_YRBS_tv"]]))
@@ -2976,11 +3392,18 @@ plot_complete_items(quo(Q22_YRBS_screentime)) + ggtitle(label(analytic_cohort[["
 ```
 
 
-##Excluded YRBS Items
+###Excluded YRBS Items
 
-```{r}
+```{r, message=FALSE}
 plot_complete_items(quo(Q18_YRBS_allergy)) + ggtitle(label(analytic_cohort[["Q18_YRBS_allergy"]]))
 plot_complete_items(quo(Q23_YRBS_pe)) + ggtitle(label(analytic_cohort[["Q23_YRBS_pe"]]))
 plot_complete_items(quo(Q24_YRBS_sportsteam)) + ggtitle(label(analytic_cohort[["Q24_YRBS_sportsteam"]]))
 plot_complete_items(quo(Q25_YRBS_concussion)) + ggtitle(label(analytic_cohort[["Q25_YRBS_concussion"]]))
+```
+
+###Anthropometric Measurements ≥85th Percentiles
+
+```{r, message = FALSE}
+plot_complete_items(quo(obesity_TSF)) + ggtitle(label(analytic_cohort[["obesity_TSF"]])) + scale_y_continuous()
+plot_complete_items(quo(obesity_WC)) + ggtitle(label(analytic_cohort[["obesity_WC"]])) + scale_y_continuous()
 ```

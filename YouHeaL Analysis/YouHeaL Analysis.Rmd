@@ -1592,7 +1592,7 @@ analytic_cohort$YRBS_physical_total %>% summary
 
 ###Derived Self-Efficacy Scores  
 
-This chunk scores the General Self-Efficacy (GSE) survey.  
+This chunk scores the [General Self-Efficacy (GSE) Scale](https://www.psytoolkit.org/survey-library/generalized-self-efficacy-gse.html).  
 
 The total score is calculated by finding the sum of the all items. For the GSE, the total score ranges between 10 and 40, with a higher score indicating more self-efficacy.
 
@@ -3076,7 +3076,101 @@ test_diff_format <- function(dataframe){
 }
 ```
 
-###Diet YRBS
+###Self-Efficacy
+
+```{r}
+
+# data frame of test results
+test_results_efficacy <- as.data.frame(rbind(
+  
+  test_diff("total_efficacy")
+
+)) %>% 
+  # call function that formats test results
+  test_diff_format()
+
+# make a plot showing the effect sizes of the differences
+test_results_efficacy %>%
+  # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
+  # filter(p_val < 0.05) %>%
+  mutate(item = case_when(
+      str_detect(item, "total_efficacy") ~ "Overall*"
+  )) %>%
+  ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
+  geom_bar(stat = "identity", fill = col_usc_yel, width = 0.3) +
+  coord_flip() +
+  # scale_y_continuous(limits = c(-0.11, 0.75), breaks = seq(0, 0.75, 0.25)) +
+  labs(caption = "* p-value < 0.05") +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.text.y = element_text(size = 10),
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    plot.caption = element_text(size = 10)
+  ) +
+  xlab("") +
+  ylab("\nDifference From Baseline to Follow-Up") +
+  ggtitle("Self-Efficacy: Can You Effectively Reach Your Goals?")
+
+# make pretty html table
+test_results_efficacy %>% 
+  kable(digits = 3) %>% 
+  #bootstrap table classes
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+###Empowerment
+
+```{r}
+
+# data frame of test results
+test_results_empower <- as.data.frame(rbind(
+  
+  test_diff("empower_composite"),
+  test_diff("empower_individual"),
+  test_diff("empower_community"),
+  test_diff("empower_organization")
+
+)) %>% 
+  # call function that formats test results
+  test_diff_format()
+
+# make a plot showing the effect sizes of the differences
+test_results_empower %>%
+  # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
+  # filter(p_val < 0.05) %>%
+  mutate(item = case_when(
+      str_detect(item, "empower_composite") ~ "Overall*",
+      str_detect(item, "empower_individual") ~ "Individual",
+      str_detect(item, "empower_community") ~ "Community",
+      str_detect(item, "empower_organization") ~ "Organization"
+  )) %>%
+  ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
+  geom_bar(stat = "identity", fill = col_usc_red) +
+  coord_flip() +
+  # scale_y_continuous(limits = c(-0.11, 0.75), breaks = seq(0, 0.75, 0.25)) +
+  labs(caption = "* p-value < 0.05") +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.text.y = element_text(size = 10),
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    plot.caption = element_text(size = 10)
+  ) +
+  xlab("") +
+  ylab("\nDifference From Baseline to Follow-Up") +
+  ggtitle("Empowerment: Perceived Control at Different Levels")
+
+# make pretty html table
+test_results_empower %>% 
+  kable(digits = 3) %>% 
+  #bootstrap table classes
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+###Diet YRBS Items
 
 ```{r}
 # data frame of test results
@@ -3137,7 +3231,8 @@ test_results_diet %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
-###Physical YRBS
+###Physical YRBS Items
+
 ```{r}
 # data frame of test results
 test_results_physical <- as.data.frame(rbind(
@@ -3166,7 +3261,7 @@ test_results_physical %>%
       str_detect(item, "strength") ~ "Strength Training"
   )) %>%
   ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
-  geom_bar(stat = "identity", fill = col_usc_red) +
+  geom_bar(stat = "identity", fill = col_usc_red, width = 0.5) +
   coord_flip() +
   scale_y_continuous(limits = c(0, 0.75), breaks = seq(0, 0.75, 0.25)) +
   labs(caption = "* p-value < 0.05") +
@@ -3191,7 +3286,7 @@ test_results_physical %>%
       str_detect(item, "screentime") ~ "Play Video Games\nor Use Social Media"
   )) %>%
   ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
-  geom_bar(stat = "identity", fill = col_usc_yel) +
+  geom_bar(stat = "identity", fill = col_usc_yel, width = 0.5) +
   coord_flip() +
   scale_x_discrete(position = "top") +
   scale_y_continuous(limits = c(-0.5, 0), breaks = seq(-0.5, 0, 0.25)) +
@@ -3292,7 +3387,7 @@ test_results_anthro %>%
       str_detect(item, "WC") ~ "≥ 85% Waist\nCircumference*"
   )) %>%
   ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
-  geom_bar(stat = "identity", fill = col_usc_red) +
+  geom_bar(stat = "identity", fill = col_usc_red, width = 0.5) +
   coord_flip() +
   scale_y_continuous(limits = c(-0.05, 0.2), breaks = seq(-0.05, 0.2, 0.05), labels = scales::percent_format(accuracy = 1)) +
   labs(caption = "* p-value < 0.05") +
@@ -3313,7 +3408,6 @@ test_results_anthro %>%
   #bootstrap table classes
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
-
 
 
 ##Plots of Items at Baseline and Follow-Up{.tabset}
@@ -3347,6 +3441,7 @@ plot_complete_items <- function(variable){
     drop_na_(variable) %>% 
     ggplot(aes(x = phase, y = !!variable, group = ID, color = cohort)) +
     geom_line(aes(alpha = 0.01)) +
+    geom_boxplot(aes(x = phase, group = phase), width = 0.2, alpha = 1) +
     # add theme colors (set in first chunk)
     scale_y_discrete(labels = wrap_format(28), drop=FALSE) +
     yh_cohort_colors() +
@@ -3357,11 +3452,26 @@ plot_complete_items <- function(variable){
       axis.text.x = element_text(size = 10),
       axis.text.y = element_text(size = 10)
       ) +
-    stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.5, color = "black", linetype = 2) +
+    stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1.7, color = "black", linetype = 2) +
   ylab("") +
   xlab(label = "\nPhase")
   
 }
+```
+
+###Self-Efficacy
+
+```{r, message=FALSE}
+plot_complete_items(quo(total_efficacy)) + ggtitle(label(analytic_cohort[["total_efficacy"]]))
+```
+
+###Empowerment
+
+```{r, message=FALSE}
+plot_complete_items(quo(empower_composite)) + ggtitle(label(analytic_cohort[["empower_composite"]]))
+plot_complete_items(quo(empower_individual)) + ggtitle(label(analytic_cohort[["empower_individual"]]))
+plot_complete_items(quo(empower_community)) + ggtitle(label(analytic_cohort[["empower_community"]]))
+plot_complete_items(quo(empower_organization)) + ggtitle(label(analytic_cohort[["empower_organization"]]))
 ```
 
 ###Diet YRBS Items

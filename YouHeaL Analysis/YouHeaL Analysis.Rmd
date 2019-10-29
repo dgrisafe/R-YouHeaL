@@ -118,6 +118,15 @@ get_data_timelineS <- function(){
                      levels = c("1", "2.1", "2.2", "3.1", "3.2"),
                      labels = c("Health Training", "Mentor Training", "Mentoring", "Coach Training", "Coaching")
                      )
+      
+      # make variable with increasing width for subsequent cohorts
+      #   note: there were bugs with legend widths, so decided against this
+      # width_cohort = case_when(
+      #   cohort == "Cohort 1" ~ 3,
+      #   cohort == "Cohort 2" ~ 6,
+      #   cohort == "Cohort 3" ~ 9
+      # )
+      
       )
 }
 
@@ -127,10 +136,13 @@ data_timelineS <- get_data_timelineS()
 # make timeline
 plot_timelineS <- function(data){
   
-  ggtimeline <- data %>% timelineG(start = "start", end = "end", names = "cohort", phase = "phase") +
+  ggtimeline <- data %>% 
+    timelineG(start = "start", end = "end", names = "cohort", phase = "phase", width = 6) +
     theme(
-      legend.position = "top",
-      legend.text = element_text(size = 10),
+      legend.position = c(0, 0.98),
+      legend.direction = "horizontal",
+      legend.box.background = element_rect(size = 10, color = "white"),
+      legend.text = element_text(size = 11),
       legend.title = element_blank()
     ) +
     scale_x_date(date_breaks = "1 year", 
@@ -143,9 +155,14 @@ plot_timelineS <- function(data){
   
 }
 
+# set parameters for width and height
+param_timeline_width  <- 2400
+param_timeline_height <- 1400
+param_timeline_resolution <- 300
+
 # save copy of timeline overall
 ggtimeline_all <- data_timelineS %>% plot_timelineS()
-dev.copy(png, "YouHeaL_ggtimeline_all.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "YouHeaL_ggtimeline_all.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline_all
 dev.off()
 
@@ -153,58 +170,59 @@ dev.off()
 
 ##timeline1
 ggtimeline1 <- data_timelineS %>% dplyr::filter(start < as.Date("2018-06-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline1.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline1.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline1
 dev.off()
 
 ##timeline2
 ggtimeline2 <- data_timelineS %>% dplyr::filter(start < as.Date("2019-01-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline2.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline2.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline2
 dev.off()
 
 ##timeline3
 ggtimeline3 <- data_timelineS %>% dplyr::filter(start < as.Date("2019-06-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline3.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline3.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline3
 dev.off()
 
 ##timeline4
 ggtimeline4 <- data_timelineS %>% dplyr::filter(start < as.Date("2020-01-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline4.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline4.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline4
 dev.off()
 
 ##timeline5
 ggtimeline5 <- data_timelineS %>% dplyr::filter(start < as.Date("2020-06-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline5.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline5.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline5
 dev.off()
 
 ##timeline6
 ggtimeline6 <- data_timelineS %>% dplyr::filter(start < as.Date("2021-01-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline6.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline6.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline6
 dev.off()
 
 ##timeline7
 ggtimeline7 <- data_timelineS %>% dplyr::filter(start < as.Date("2021-06-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline7.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline7.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline7
 dev.off()
 
 ##timeline8
 ggtimeline8 <- data_timelineS %>% dplyr::filter(start < as.Date("2022-01-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline8.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline8.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline8
 dev.off()
 
 ##timeline9
 ggtimeline9 <- data_timelineS %>% dplyr::filter(start < as.Date("2022-06-01")) %>% plot_timelineS()
-dev.copy(png, "Timeline/YouHeaL_ggtimeline9.png", width = 2400, height = 1400, res = 300)
+dev.copy(png, "Timeline/YouHeaL_ggtimeline9.png", width = param_timeline_width, height = param_timeline_height, res = param_timeline_resolution)
 ggtimeline9
 dev.off()
 ```
+
 ![](YouHeaL_ggtimeline_all.png)
 
 ##Timeline, vistime
@@ -3109,7 +3127,8 @@ test_results_efficacy %>%
     plot.caption = element_text(size = 10)
   ) +
   xlab("") +
-  ylab("\nDifference From Baseline to Follow-Up") +
+  ylim(c(0,2)) +
+  ylab("\nDifference From Baseline to Follow-Up (Points, Range 10 to 40)") +
   ggtitle("Self-Efficacy: Can You Effectively Reach Your Goals?")
 
 # make pretty html table
@@ -3159,7 +3178,8 @@ test_results_empower %>%
     plot.caption = element_text(size = 10)
   ) +
   xlab("") +
-  ylab("\nDifference From Baseline to Follow-Up") +
+  ylab("\nDifference From Baseline to Follow-Up (Points, Range 12 to 48)") +
+  ylim(c(0,2)) +
   ggtitle("Empowerment: Perceived Control at Different Levels")
 
 # make pretty html table
@@ -3221,7 +3241,8 @@ test_results_diet %>%
     plot.caption = element_text(size = 10)
   ) +
   xlab("") +
-  ylab("\nDifference From Baseline to Follow-Up") +
+  ylab("\nDifference From Baseline to Follow-Up (Count)") +
+  ylim(c(-0.13,1)) +
   ggtitle("In the Past Week, How Often Did You Consume...")
 
 # make pretty html table
@@ -3263,7 +3284,7 @@ test_results_physical %>%
   ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
   geom_bar(stat = "identity", fill = col_usc_red, width = 0.5) +
   coord_flip() +
-  scale_y_continuous(limits = c(0, 0.75), breaks = seq(0, 0.75, 0.25)) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
   labs(caption = "* p-value < 0.05") +
   theme(
     plot.title = element_text(size = 16),
@@ -3273,7 +3294,7 @@ test_results_physical %>%
     plot.caption = element_text(size = 10)
   ) +
   xlab("") +
-  ylab("\nDifference From Baseline to Follow-Up") +
+  ylab("\nDifference From Baseline to Follow-Up (Days)") +
   ggtitle("In the Past Week, How Many Days Were You...")
 
 # screen time
@@ -3281,15 +3302,18 @@ test_results_physical %>%
   # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
   # filter(p_val < 0.05) %>%
   filter(item %in% c("Q21_YRBS_tv", "Q22_YRBS_screentime")) %>% 
-  mutate(item = case_when(
+  mutate(
+    item = case_when(
       str_detect(item, "tv") ~ "Watch TV",
       str_detect(item, "screentime") ~ "Play Video Games\nor Use Social Media"
-  )) %>%
+      ),
+    estimate = estimate * 60
+    ) %>%
   ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
   geom_bar(stat = "identity", fill = col_usc_yel, width = 0.5) +
   coord_flip() +
   scale_x_discrete(position = "top") +
-  scale_y_continuous(limits = c(-0.5, 0), breaks = seq(-0.5, 0, 0.25)) +
+  scale_y_continuous(limits = c(-60, 0), breaks = seq(-60, 0, 20)) +
   labs(caption = "* p-value < 0.05") +
   theme(
     plot.title = element_text(size = 14),
@@ -3299,8 +3323,8 @@ test_results_physical %>%
     plot.caption = element_text(size = 10)
   ) +
   xlab("") +
-  ylab("\nDifference From Baseline to Follow-Up") +
-  ggtitle("On an Average School Day, How Many Hours Did You...")
+  ylab("\nDifference From Baseline to Follow-Up (Minutes)") +
+  ggtitle("On an Average School Day, How Many Minutes Did You...")
 
 # make pretty html table
 test_results_physical %>% 
@@ -3371,8 +3395,8 @@ Proportion with triceps skin fold (mm) or waist circumference (cm) greater than 
 # data frame of test results
 test_results_anthro <- as.data.frame(rbind(
   
-  test_diff_cat("obesity_TSF"),
-  test_diff_cat("obesity_WC")
+  test_diff_cat("obesity_WC"),
+  test_diff_cat("obesity_TSF")
   
 )) %>% 
   # call function that formats test results
@@ -3383,13 +3407,14 @@ test_results_anthro %>%
   # filter for just the statistically significant comparisons, before adjusting for multiple comparisons
   # filter(p_val < 0.05) %>%
   mutate(item = case_when(
-      str_detect(item, "TSF") ~ "≥ 85% Triceps\nSkin Fold",
-      str_detect(item, "WC") ~ "≥ 85% Waist\nCircumference*"
+      str_detect(item, "WC") ~ "≥ 85% Waist\nCircumference*",
+      str_detect(item, "TSF") ~ "≥ 85% Triceps\nSkin Fold"
   )) %>%
-  ggplot(aes(x = fct_reorder(item, estimate), y = estimate)) +
+  ggplot(aes(x = fct_reorder(item, -estimate), y = estimate)) +
   geom_bar(stat = "identity", fill = col_usc_red, width = 0.5) +
   coord_flip() +
-  scale_y_continuous(limits = c(-0.05, 0.2), breaks = seq(-0.05, 0.2, 0.05), labels = scales::percent_format(accuracy = 1)) +
+  scale_y_continuous(limits = c(-0.05, 1), breaks = seq(0, 1, 0.2), labels = scales::percent_format(accuracy = 1)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
   labs(caption = "* p-value < 0.05") +
   theme(
     plot.title = element_text(size = 16),
@@ -3399,8 +3424,8 @@ test_results_anthro %>%
     plot.caption = element_text(size = 10)
   ) +
   xlab("") +
-  ylab("\nDifference From Baseline to Follow-Up") +
-  ggtitle("Proportion Overweight by Body Measurements")
+  ylab("\n% Difference From Baseline to Follow-Up (n = 30)") +
+  ggtitle("Percent Overweight by Body Measurements")
 
 # make pretty html table
 test_results_anthro %>% 
